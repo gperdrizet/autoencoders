@@ -1,173 +1,348 @@
-# Deep learning GPU development environment
+# Autoencoders demo
 
-A ready-to-use deep learning environment with NVIDIA GPU support for VS Code. Includes both **PyTorch** and **TensorFlow** frameworks. Designed for cross-platform support and wide GPU compatibility.
+Interactive demonstrations of autoencoder applications for AI/ML bootcamp students.
 
-## What's included
+## Overview
 
-| Category | Versions |
-|----------|----------|
-| **GPU** | CUDA 12.5, cuDNN 9.1 |
-| **ML** | PyTorch 2.10, TensorFlow 2.16, Keras 3.3, Scikit-learn 1.4 |
-| **Python** | Python 3.10, NumPy 1.24, Pandas 2.2, Matplotlib 3.10 |
-| **Tools** | JupyterLab, TensorBoard, Optuna |
+This repository contains three comprehensive demonstrations showing the power and versatility of autoencoders using the CIFAR-10 dataset:
 
-Based on [NVIDIA's TensorFlow 24.06 container](https://docs.nvidia.com/deeplearning/frameworks/tensorflow-release-notes/rel-24-06.html).
+1. **Image compression** - Compress images while maintaining quality
+2. **Anomaly detection** - Identify unusual patterns using reconstruction error
+3. **VAE generation** - Generate new synthetic images with Variational Autoencoders
 
-> **No NVIDIA GPU?** Use the CPU version instead: [gperdrizet/deeplearning-CPU](https://github.com/gperdrizet/deeplearning-CPU)
-
-## Project structure
-
-```
-tensorflow-GPU/
-├── .devcontainer/
-│   └── devcontainer.json       # Dev container configuration
-├── data/                       # Store datasets here
-├── logs/                       # TensorBoard logs
-├── models/                     # Saved model files
-├── notebooks/
-│   ├── environment_test.ipynb  # Verify your setup
-│   └── functions/              # Helper modules for notebooks
-├── .gitignore
-├── LICENSE
-└── README.md
-```
-
-## Requirements
-
-- **NVIDIA GPU** (Pascal or newer) with driver ≥545
-- **Docker** with GPU support ([Windows](https://docs.docker.com/desktop/setup/install/windows-install) | [Linux](https://docs.docker.com/desktop/setup/install/linux))
-- **VS Code** with the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
-
-> **Linux users:** Also install the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
-
-### GPU compatibility
-
-This environment requires an NVIDIA GPU with **compute capability 6.0+** (Pascal architecture or newer):
-
-| Architecture | Example GPUs | Compute Capability |
-|--------------|--------------|-------------------|
-| Pascal | GTX 1050–1080, Tesla P100 | 6.0–6.1 |
-| Volta | Tesla V100, Titan V | 7.0 |
-| Turing | RTX 2060–2080, GTX 1660 | 7.5 |
-| Ampere | RTX 3060–3090, A100 | 8.0–8.6 |
-| Ada Lovelace | RTX 4060–4090 | 8.9 |
-| Hopper | H100, H200 | 9.0 |
-| Blackwell | RTX 5070–5090, B100, B200 | 10.0 |
-
-Check your GPU's compute capability: [NVIDIA CUDA GPUs](https://developer.nvidia.com/cuda-gpus)
-
-> **Note:** This environment is configured for broad GPU compatibility, supporting Pascal and newer architectures. If you have a more recent GPU (e.g. Ada Lovelace, Hopper, or Blackwell), you may benefit from using a newer CUDA version to access the latest performance optimizations and features. Consider setting up a custom environment with an updated [NVIDIA TensorFlow container](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/tensorflow) to take full advantage of your hardware.
+Each demo includes:
+- **Training notebooks** - Step-by-step training with detailed explanations
+- **Interactive web app** - Streamlit-based demo for hands-on exploration
+- **Quality metrics** - PSNR, SSIM, ROC-AUC, and more
+- **Pre-trained models** - Ready-to-use models in `.keras` format
 
 ## Quick start
 
-To quickly try the container environment out on your system do the following. If you want to use it for your own project, see below.
+### Prerequisites
 
-1. **Fork** this repository (click "Fork" button above)
+- Python 3.8+
+- (Optional) NVIDIA GPU with CUDA for faster training
 
-2. **Clone** your fork:
+### Installation
+
+1. **Clone the repository**
    ```bash
-   git clone https://github.com/<your-username>/deeplearning-GPU.git
+   git clone <repository-url>
+   cd autoencoders
    ```
 
-3. **Open VS Code**
+2. **Install dependencies**
 
-4. **Open Folder in Container** from the VS Code command pallet (Ctrl+shift+p), start typing `Open Folder in`...
-
-5. **Verify** by running `notebooks/environment_test.ipynb`
-
-## Using as a template for new projects
-
-You can use your fork as a template to quickly create new deep learning projects:
-
-### One-time setup: Make your fork a template
-
-1. Go to your fork on GitHub
-2. Click **Settings** → scroll to **Template repository**
-3. Check the box to enable it
-
-### Creating a new project from your template
-
-1. Go to your fork on GitHub
-2. Click the green **Use this template** button → **Create a new repository**
-3. Enter your new repository name and settings
-4. Click **Create repository**
-5. **Clone** your new repository:
+   For local development with GPU:
    ```bash
-   git clone https://github.com/<your-username>/my-new-project.git
-   ```
-6. **Clean up** (optional): Remove the example notebooks, then add your own code:
-   ```bash
-   rm -rf notebooks/*.ipynb
-   git add -A && git commit -m "Initial project setup"
-   git push
+   pip install -r requirements.txt
    ```
 
-Now you have a fresh deep learning GPU project with the dev container configuration ready to go!
+   For Streamlit Cloud deployment:
+   ```bash
+   pip install -r requirements-cloud.txt
+   ```
 
-## Adding Python packages
+### Running the Demos
 
-### Using pip directly
+#### Option 1: Streamlit Web App (Recommended)
 
-Install packages in the container terminal:
+Launch the interactive web application:
 
 ```bash
-pip install <package-name>
+streamlit run app.py
 ```
 
-> **Note:** Packages installed this way will be lost when the container is rebuilt.
+Then navigate to `http://localhost:8501` in your browser.
 
-### Using requirements.txt (Recommended)
+#### Option 2: Training Notebooks
 
-For persistent packages that survive container rebuilds:
-
-1. **Create** a `requirements.txt` file in the repository root:
-   ```
-   scikit-image==0.22.0
-   plotly
-   ```
-
-2. **Update** `.devcontainer/devcontainer.json` to install packages on container creation by adding a `postCreateCommand`:
-   ```json
-   "postCreateCommand": "pip install -r requirements.txt"
-   ```
-
-3. **Rebuild** the container (`F1` → "Dev Containers: Rebuild Container")
-
-Now your packages will be automatically installed whenever the container is created.
-
-## TensorBoard
-
-To launch TensorBoard:
-
-1. Open the command palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
-2. Run **Python: Launch TensorBoard**
-3. Select the `logs/` directory when prompted
-
-TensorBoard will open in a new tab within VS Code. Place your training logs in the `logs/` directory.
-
-## Optuna dashboard
-
-Access the Optuna dashboard by right clicking on your Optuna database file and selecting 'Open in Optuna Dashboard'.
-
-> Note: the default ports for TensorBoard and Optuna are published by the container, so you can also run them via their respective built in web servers and they will be avalible on the host's localhost.
-
-## Keeping your fork updated
+Open Jupyter and run the training notebooks in order:
 
 ```bash
-# Add upstream (once)
-git remote add upstream https://github.com/gperdrizet/deeplearning-GPU.git
-
-# Sync
-git fetch upstream
-git merge upstream/main
+jupyter notebook
 ```
 
-## Troubleshooting
+Navigate to:
+1. `notebooks/01-compression.ipynb` - Train compression autoencoders
+2. `notebooks/02-anomaly_detection.ipynb` - Train anomaly detector
+3. `notebooks/03-generation.ipynb` - Train VAE for generation
 
-| Problem | Solution |
-|---------|----------|
-| Docker won't start | Enable virtualization in BIOS |
-| Permission denied (Linux) | Add user to docker group, then log out/in |
-| GPU not detected | Update NVIDIA drivers (≥545) |
-| Container build fails | Check internet connection |
+## ## Project structure
 
+```
+autoencoders/
+├── app.py                          # Main Streamlit app (landing page)
+├── pages/                          # Streamlit demo pages
+│   ├── 01-compression.py           # Compression demo
+│   ├── 02-anomaly_detection.py     # Anomaly detection demo
+│   └── 03-vae_generation.py        # VAE generation demo
+├── notebooks/                      # Training notebooks
+│   ├── 01-compression.ipynb        # Train compression models
+│   ├── 02-anomaly_detection.ipynb  # Train anomaly detector
+│   └── 03-generation.ipynb         # Train VAE
+├── src/                           # Shared utilities
+│   ├── __init__.py
+│   ├── model_utils.py            # Model architectures & loading
+│   ├── data_utils.py             # CIFAR-10 loading & preprocessing
+│   ├── visualization.py          # Plotting functions
+│   ├── metrics.py                # Quality metrics
+│   ├── vae_navigation.py         # VAE interactive components
+│   └── streamlit_components.py   # Reusable UI components
+├── models/                        # Saved models (after training)
+│   ├── compression_ae_latent32.keras
+│   ├── compression_ae_latent64.keras
+│   ├── compression_ae_latent128.keras
+│   ├── compression_ae_latent256.keras
+│   ├── anomaly_ae.keras
+│   └── vae.keras
+├── data/                          # CIFAR-10 cache (auto-downloaded)
+├── logs/                          # TensorBoard logs
+├── .streamlit/                    # Streamlit configuration
+│   └── config.toml
+├── requirements.txt               # Local development dependencies
+├── requirements-cloud.txt         # Cloud deployment dependencies
+└── README.md                      # This file
+```
+
+## Demos
+
+### 1. Image compression
+
+**What it does:**
+- Compresses 32×32 RGB images into smaller latent representations
+- Reconstructs images from compressed form
+- Compares quality across different compression ratios
+
+**Key Features:**
+- Multiple compression levels (32, 64, 128, 256 latent dimensions)
+- Quality metrics (MSE, PSNR, SSIM)
+- Upload your own images
+- Side-by-side comparison
+- Difference heatmaps
+
+**Compression Ratios:**
+- Latent 32: ~96× compression
+- Latent 64: ~48× compression
+- Latent 128: ~24× compression
+- Latent 256: ~12× compression
+
+### 2. Anomaly detection
+
+**What it does:**
+- Detects unusual/anomalous patterns in images
+- Uses reconstruction error as anomaly score
+- Trained on 8 CIFAR-10 classes, detects remaining 2 as anomalies
+
+**Key Features:**
+- Adjustable detection threshold
+- ROC curve analysis
+- Confusion matrix
+- Top anomalies visualization
+- Error distribution histograms
+- Per-image error heatmaps
+
+**Performance:**
+- Achieves ROC-AUC > 0.9
+- Configurable precision/recall trade-off
+- Real-time threshold adjustment
+
+### 3. VAE generation
+
+**What it does:**
+- Generates brand new, synthetic images
+- Explores smooth probabilistic latent space
+- Performs latent space arithmetic
+
+**Key Features:**
+- Random image generation
+- Manual latent space navigation (sliders)
+- Smooth interpolation between images
+- Latent arithmetic (A + B - C)
+- Temperature-controlled sampling
+
+**What's Special:**
+- Variational approach with KL divergence
+- Reparameterization trick for gradients
+- Continuous, structured latent space
+
+## ## Training the models
+
+### Step 1: Compression Autoencoders
+
+Run `notebooks/01-compression.ipynb` to train models with different latent dimensions:
+
+- Trains 4 models (latent dims: 32, 64, 128, 256)
+- ~50 epochs per model
+- Saves to `models/compression_ae_latent{dim}.keras`
+- Includes quality analysis and visualizations
+
+**Training Time:** ~30-60 minutes on GPU, ~2-4 hours on CPU
+
+### Step 2: Anomaly Detection
+
+Run `notebooks/02-anomaly_detection.ipynb` to train the anomaly detector:
+
+- Trains on 8 CIFAR-10 classes (airplane, automobile, bird, cat, deer, dog, frog, horse)
+- Uses ship and truck as anomalies
+- ~50 epochs
+- Saves to `models/anomaly_ae.keras`
+- Includes ROC analysis and threshold optimization
+
+**Training Time:** ~20-40 minutes on GPU, ~1-2 hours on CPU
+
+### Step 3: Variational Autoencoder
+
+Run `notebooks/03-generation.ipynb` to train the VAE:
+
+- Trains on all CIFAR-10 classes
+- ~100 epochs (VAEs need more training)
+- Saves to `models/vae.keras`
+- Includes interpolation and latent space visualization
+
+**Training Time:** ~60-90 minutes on GPU, ~4-6 hours on CPU
+
+## Using the Streamlit app
+
+### Local Deployment
+
+```bash
+streamlit run app.py
+```
+
+The app will open at `http://localhost:8501`
+
+### Cloud Deployment (Streamlit Community Cloud)
+
+1. **Push to GitHub**
+   ```bash
+   git add .
+   git commit -m "Add autoencoder demos"
+   git push origin main
+   ```
+
+2. **Deploy on Streamlit Cloud**
+   - Go to [share.streamlit.io](https://share.streamlit.io)
+   - Click "New app"
+   - Select your repository
+   - Set main file: `app.py`
+   - Set Python version: 3.9+
+   - Click "Deploy"
+
+3. **Configuration**
+   - Uses `requirements-cloud.txt` automatically
+   - TensorFlow CPU version for smaller footprint
+   - Float16 quantized models recommended for 1GB RAM limit
+
+## Model details
+
+### Architecture
+
+All models use **4-5 layer convolutional architectures**:
+
+**Encoder:**
+```
+Input (32×32×3)
+  ↓ Conv2D(64) + BN + ReLU
+  ↓ Conv2D(128) + BN + ReLU
+  ↓ Conv2D(256) + BN + ReLU
+  ↓ Conv2D(512) + BN + ReLU
+  ↓ Flatten → Dense(latent_dim)
+Latent Vector
+```
+
+**Decoder:**
+```
+Latent Vector
+  ↓ Dense(2×2×512) → Reshape
+  ↓ Conv2DTranspose(512) + BN + ReLU
+  ↓ Conv2DTranspose(256) + BN + ReLU
+  ↓ Conv2DTranspose(128) + BN + ReLU
+  ↓ Conv2DTranspose(64) + BN + ReLU
+  ↓ Conv2D(3) + Sigmoid
+Output (32×32×3)
+```
+
+**VAE Differences:**
+- Encoder outputs `z_mean` and `z_log_var`
+- Sampling layer with reparameterization trick
+- Loss = Reconstruction + β×KL Divergence (β=0.0005)
+
+### Training Configuration
+
+- **Optimizer:** Adam (lr=0.001)
+- **Loss:** MSE (compression/anomaly), MSE+KL (VAE)
+- **Batch Size:** 128
+- **Callbacks:** EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
+
+## ## Development
+
+### Running Tests
+
+```bash
+# TODO: Add tests
+pytest tests/
+```
+
+### Code Style
+
+The codebase follows:
+- PEP 8 style guidelines
+- Type hints for function parameters
+- Comprehensive docstrings
+- Modular, reusable components
+
+### Project Philosophy
+
+- **Educational Focus:** Clear explanations and visualizations
+- **Modularity:** Shared utilities for both notebooks and Streamlit
+- **Reproducibility:** Fixed random seeds, saved models
+- **Deployment-Ready:** Optimized for both local and cloud
+
+## ## Learning resources
+
+### Key Concepts
+
+- **Autoencoders:** Neural networks that learn compressed representations
+- **Latent Space:** The compressed representation (bottleneck)
+- **Reconstruction Error:** Difference between input and output
+- **Variational Autoencoders:** Probabilistic generative models
+- **KL Divergence:** Regularization term for VAEs
+
+### Further Reading
+
+- [Original VAE Paper](https://arxiv.org/abs/1312.6114) - Kingma & Welling, 2013
+- [β-VAE](https://openreview.net/forum?id=Sy2fzU9gl) - Higgins et al., 2017
+- [Understanding VAEs](https://arxiv.org/abs/1606.05908) - Doersch, 2016
+- [Anomaly Detection Survey](https://arxiv.org/abs/2007.02500)
+
+## ## Contributing
+
+This is an educational project for bootcamp students. Contributions are welcome!
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## ## License
+
+MIT License - see LICENSE file for details
+
+## ## Acknowledgments
+
+- CIFAR-10 dataset: [Learning Multiple Layers of Features from Tiny Images](https://www.cs.toronto.edu/~kriz/learning-features-2009-TR.pdf)
+- TensorFlow/Keras team
+- Streamlit team
+- AI/ML Bootcamp students and instructors
+
+## ## Support
+
+For questions or issues:
+- Open an issue on GitHub
+- Contact the bootcamp instructors
+- Check the documentation in notebooks and code comments
+
+---
+
+**Built for AI/ML bootcamp students**
