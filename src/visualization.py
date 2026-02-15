@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 
-def plot_image_grid(images, titles=None, rows=2, cols=5, figsize=(15, 6), cmap=None):
+def plot_image_grid(images, titles=None, rows=2, cols=5, figsize=(8, 3), cmap=None):
     """
     Plot a grid of images using Matplotlib (for notebooks).
     
