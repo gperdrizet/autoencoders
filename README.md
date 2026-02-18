@@ -4,17 +4,17 @@ Interactive demonstrations of autoencoder applications for AI/ML bootcamp studen
 
 ## Overview
 
-This repository contains three comprehensive demonstrations showing the power and versatility of autoencoders using the TF Flowers dataset:
+This repository contains three comprehensive demonstrations showing the power and versatility of autoencoders:
 
-1. **Image compression** - Compress images while maintaining quality
-2. **Anomaly detection** - Identify unusual patterns using reconstruction error
-3. **VAE generation** - Generate new synthetic images with Variational Autoencoders
+1. **Image compression** - Compress COCO images while maintaining quality
+2. **Anomaly detection** - Identify unusual patterns using reconstruction error (Flowers vs COCO)
+3. **Image denoising** - Remove noise from corrupted images
 
 Each demo includes:
 - **Training notebooks** - Step-by-step training with detailed explanations
 - **Interactive web app** - Streamlit-based demo for hands-on exploration
 - **Quality metrics** - PSNR, SSIM, ROC-AUC, and more
-- **Pre-trained models** - Ready-to-use models in `.keras` format
+- **Pre-trained models** - Ready-to-use models automatically downloaded from HuggingFace
 
 ## Quick start
 
@@ -43,14 +43,22 @@ Each demo includes:
    pip install -r requirements-cloud.txt
    ```
 
-3. **Configure Hugging Face (Optional)**
+3. **Configure environment (optional)**
    
-   Pre-trained models are hosted on Hugging Face and will download automatically. To use your own models:
+   Pre-trained models and datasets are hosted on HuggingFace and will download automatically.
    
    ```bash
    cp .env.example .env
-   # Edit .env and set your HF_REPO_ID
    ```
+   
+   **For students:** Leave `.env` as-is to use pre-trained models - no HuggingFace account needed!
+   
+   **For instructors:** To re-train and upload your own models:
+   - Create a HuggingFace repository at https://huggingface.co/new
+   - Edit `.env` and update `HF_REPO_ID` with your repo name
+   - Get a token from https://huggingface.co/settings/tokens (write access)
+   - Add `HF_TOKEN` to `.env`
+   - Set `TRAIN_MODEL=True` in notebooks - trained models will auto-upload
 
 ### Running the Demos
 
@@ -75,9 +83,11 @@ jupyter notebook
 ```
 
 Navigate to:
-1. `notebooks/01-compression.ipynb` - Train compression autoencoders
-2. `notebooks/02-anomaly_detection.ipynb` - Train anomaly detector
-3. `notebooks/03-generation.ipynb` - Train VAE for generation
+1. `notebooks/01-compression.ipynb` - Train compression autoencoders (or download pre-trained)
+2. `notebooks/02-anomaly_detection.ipynb` - Train anomaly detector (or download pre-trained)
+3. `notebooks/02-denoising.ipynb` - Train denoising autoencoder (or download pre-trained)
+
+**Tip:** Set `TRAIN_MODEL = False` at the top of each notebook to use pre-trained models without training.
 
 ## ## Project structure
 
@@ -87,32 +97,30 @@ autoencoders/
 ├── pages/                          # Streamlit demo pages
 │   ├── 01-compression.py           # Compression demo
 │   ├── 02-anomaly_detection.py     # Anomaly detection demo
-│   └── 03-vae_generation.py        # VAE generation demo
+│   └── 03-denoising.py             # Denoising demo
 ├── notebooks/                      # Training notebooks
 │   ├── 01-compression.ipynb        # Train compression models
 │   ├── 02-anomaly_detection.ipynb  # Train anomaly detector
-│   └── 03-generation.ipynb         # Train VAE
+│   └── 02-denoising.ipynb          # Train denoising model
 ├── src/                           # Shared utilities
 │   ├── __init__.py
 │   ├── model_utils.py            # Model architectures & loading
-│   ├── data_utils.py             # TF Flowers loading & preprocessing
+│   ├── data_utils.py             # Dataset loading & preprocessing
 │   ├── visualization.py          # Plotting functions
 │   ├── metrics.py                # Quality metrics
-│   ├── vae_navigation.py         # VAE interactive components
 │   ├── streamlit_components.py   # Reusable UI components
-│   └── huggingface_utils.py      # Model download utilities
+│   └── huggingface_utils.py      # Model/dataset download/upload
 ├── models/                        # Saved models (auto-downloaded from HF)
 │   ├── compression_ae_latent32.keras
 │   ├── compression_ae_latent64.keras
 │   ├── compression_ae_latent128.keras
 │   ├── compression_ae_latent256.keras
 │   ├── anomaly_ae.keras
-│   └── vae.keras
-├── data/                          # TF Flowers cache (auto-downloaded)
+│   └── denoising_ae.keras
+├── data/                          # Dataset cache (auto-downloaded)
 ├── logs/                          # TensorBoard logs
 ├── .streamlit/                    # Streamlit configuration
 │   └── config.toml
-├── upload_models.py               # Script to upload models to HF
 ├── requirements.txt               # Local development dependencies
 ├── requirements-cloud.txt         # Cloud deployment dependencies
 ├── .env.example                   # Environment configuration template

@@ -35,6 +35,103 @@ COCO_CLASSES = [
 IMAGE_SIZE = 64
 
 
+def load_coco_cached(subset_percent=10, normalize=True, image_size=IMAGE_SIZE, cache_dir='../data'):
+    """
+    Load COCO dataset with caching for faster subsequent loads.
+    
+    This function attempts to load the dataset in the following order:
+    1. Local cache (if exists)
+    2. Hugging Face Hub (pre-processed subset)
+    3. TensorFlow Datasets (full download)
+    
+    Args:
+        subset_percent: Percentage of training data to use (1-100)
+        normalize: If True, normalize pixel values to [0, 1]
+        image_size: Target image size
+        cache_dir: Directory to store cached subset
+    
+    Returns:
+        Tuple of ((x_train, y_train), (x_test, y_test))
+    """
+    from pathlib import Path
+    
+    cache_path = Path(cache_dir)
+    cache_path.mkdir(exist_ok=True)
+    
+    cache_file = cache_path / f'coco_{subset_percent}percent_subset.npz'
+    
+    # Try loading from local cache first (silent - fast path)
+    if cache_file.exists():
+        data = np.load(cache_file)
+        x_train = data['x_train']
+        y_train = data['y_train']
+        x_test = data['x_test']
+        y_test = data['y_test']
+        return (x_train, y_train), (x_test, y_test)
+    
+    # Try downloading from Hugging Face Hub
+    try:
+        from huggingface_hub import hf_hub_download
+        from src.huggingface_utils import HF_REPO_ID
+        
+        print(f'📥 Downloading COCO {subset_percent}% subset from HuggingFace...')
+        
+        # Download from HF Hub (has built-in progress bar)
+        downloaded_path = hf_hub_download(
+            repo_id=HF_REPO_ID,
+            filename=f'data/coco_{subset_percent}percent_subset.npz',
+            repo_type='model',
+            cache_dir=str(cache_path / '.hf_cache')
+        )
+        
+        # Load and cache locally
+        data = np.load(downloaded_path)
+        x_train = data['x_train']
+        y_train = data['y_train']
+        x_test = data['x_test']
+        y_test = data['y_test']
+        
+        np.savez_compressed(
+            cache_file,
+            x_train=x_train,
+            y_train=y_train,
+            x_test=x_test,
+            y_test=y_test
+        )
+        
+        return (x_train, y_train), (x_test, y_test)
+        
+    except Exception:
+        # Fall back to TFDS
+        print('📥 Downloading COCO dataset from TensorFlow Datasets (~95GB)...')
+    
+    # Fallback: Download from TFDS (has built-in progress bar)
+    (x_train, y_train), (x_test, y_test) = load_coco(
+        subset_percent=subset_percent,
+        normalize=normalize,
+        image_size=image_size
+    )
+    
+    # Save to cache
+    np.savez_compressed(
+        cache_file,
+        x_train=x_train,
+        y_train=y_train,
+        x_test=x_test,
+        y_test=y_test
+    )
+    
+    # Auto-upload to Hugging Face if token is available (instructor mode)
+    try:
+        from src.huggingface_utils import upload_dataset
+        upload_dataset(cache_file, f'data/coco_{subset_percent}percent_subset.npz')
+    except Exception:
+        # Silent skip if upload fails - students don't need this
+        pass
+    
+    return (x_train, y_train), (x_test, y_test)
+
+
 def load_flowers(normalize=True, image_size=IMAGE_SIZE):
     """
     Load TF Flowers dataset.
@@ -106,26 +203,43 @@ def load_coco(subset_percent=10, normalize=True, image_size=IMAGE_SIZE):
     
     Returns:
         Tuple of ((x_train, y_train), (x_test, y_test))
+        Note: y_train and y_test contain the label of the first object in each image
     """
     # Construct split strings
     train_split = f'train[:{subset_percent}%]'
     test_split = 'validation[:20%]'  # Use 20% of validation set for testing
     
     # Load dataset using TensorFlow Datasets
+    # COCO is an object detection dataset, so we load it without as_supervised
     (ds_train, ds_test), ds_info = tfds.load(
         'coco/2017',
         split=[train_split, test_split],
-        as_supervised=True,
+        as_supervised=False,
         with_info=True,
     )
     
-    def preprocess_fn(image, label):
-        """Resize and optionally normalize images."""
+    def preprocess_fn(example):
+        """Extract image and first object label, then resize and normalize."""
+        image = example['image']
+        
+        # Extract the first object's label (COCO images can have multiple objects)
+        # If no objects, use label 0
+        objects = example['objects']
+        label = tf.cond(
+            tf.size(objects['label']) > 0,
+            lambda: objects['label'][0],
+            lambda: tf.constant(0, dtype=tf.int64)
+        )
+        
+        # Resize image
         image = tf.image.resize(image, [image_size, image_size])
+        
+        # Normalize if requested
         if normalize:
             image = tf.cast(image, tf.float32) / 255.0
         else:
             image = tf.cast(image, tf.uint8)
+        
         return image, label
     
     # Apply preprocessing

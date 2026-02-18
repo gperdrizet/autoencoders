@@ -2,18 +2,24 @@
 
 ## Overview
 
-This project uses **Hugging Face Hub** to store and distribute pre-trained models. This means:
+This project uses **Hugging Face Hub** to store and distribute:
 
-- **No Git LFS complexity** - Models aren't in the repository  
-- **Automatic downloads** - Models download when needed  
+- **Pre-trained models** - 6 trained autoencoder models
+- **COCO dataset subset** - Pre-processed 10% subset (~300-500 MB)
+
+This means:
+
+- **No Git LFS complexity** - Models and data aren't in the repository  
+- **Automatic downloads** - Everything downloads when needed  
+- **No massive downloads** - Students get 300MB instead of 95GB for COCO
 - **Easy updates** - Just upload new versions to Hugging Face  
-- **Free hosting** - Hugging Face provides free model hosting  
+- **Free hosting** - Hugging Face provides free hosting  
 
-## For Students (Using Pre-trained Models)
+## For Students (Using Pre-trained Models & Data)
 
 ### Quick Start
 
-Just clone and run - that's it! Models download automatically:
+Just clone and run - that's it! Models and data download automatically:
 
 ```bash
 git clone <repository-url>
@@ -22,23 +28,40 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-When you first run the app or notebooks, models will download from Hugging Face. This happens only once - they're cached locally afterward.
+When you first run the app or notebooks:
+- **COCO dataset** downloads from Hugging Face (~300-500 MB, one-time)
+- **Models** download when needed (~500 MB total)
+- Everything caches locally for future use
 
 ### What Happens Behind the Scenes
 
-1. You run the app or notebook
-2. Code checks if model exists locally
-3. If not found, downloads from Hugging Face
-4. Saves to `models/` directory
-5. Uses local copy on subsequent runs
+**For Dataset Loading:**
+1. Check local cache (`data/coco_10percent_subset.npz`)
+2. If not found, download from Hugging Face (~300-500 MB)
+3. If HF fails, fallback to TensorFlow Datasets (~95GB - rare)
+4. Cache locally for next time
+
+**For Models:**
+1. Check if model exists locally (`models/`)
+2. If not found, download from Hugging Face
+3. Save to `models/` directory
+4. Use local copy on subsequent runs
+
+### Storage Requirements
+
+- **With Hugging Face**: ~1 GB (models + dataset cache)
+- **Without Hugging Face**: ~100 GB (full COCO download)
 
 ### Troubleshooting
 
-**Problem:** Download fails  
-**Solution:** Check your internet connection. Models are 50-200MB each.
+**Problem:** Dataset download fails  
+**Solution:** Check internet connection. If Hugging Face is down, it will fallback to TensorFlow Datasets (slow but reliable).
 
 **Problem:** "Model not found" error  
 **Solution:** Make sure `HF_REPO_ID` is set correctly in `src/huggingface_utils.py`
+
+**Problem:** Download is slow
+**Solution:** First-time setup downloads ~800 MB total. Subsequent runs use cached data.
 
 ## For Instructors (Uploading Models)
 
@@ -62,31 +85,55 @@ When you first run the app or notebooks, models will download from Hugging Face.
    # Paste your token from https://huggingface.co/settings/tokens
    ```
 
-### Training and Uploading Models
+### Training and Uploading
 
-1. **Train models** using the notebooks:
+1. **Upload the COCO dataset first** (one-time, instructor only):
+   ```bash
+   # This processes and uploads the 10% COCO subset
+   python upload_dataset.py --repo-id your-username/autoencoders-demo
+   ```
+   
+   **Note**: First run requires downloading full COCO (~95GB) from TensorFlow Datasets.
+   After processing, only the 300-500 MB subset is uploaded to Hugging Face.
+   This step is done once by the instructor - students just download the subset.
+
+2. **Train models** using the notebooks:
    ```bash
    # Run all cells in:
    # - notebooks/01-compression.ipynb
+   # - notebooks/02-denoising.ipynb  
    # - notebooks/02-anomaly_detection.ipynb
-   # - notebooks/03-generation.ipynb
    ```
 
-2. **Upload to Hugging Face**:
+3. **Upload models to Hugging Face**:
    ```bash
    python upload_models.py --repo-id your-username/autoencoders-demo
+   ```downloads"
+   git push
    ```
 
-3. **Update configuration**:
-   - Edit `src/huggingface_utils.py`
-   - Change: `HF_REPO_ID = "your-username/autoencoders-demo"`
-   - Commit and push
+### Expected Content on Hugging Face
 
-4. **Share with students**:
-   ```bash
-   git add .
-   git commit -m "Configure Hugging Face model downloads"
-   git push
+After setup, your repository should have:
+
+**Dataset:**
+```
+data/
+└── coco_10percent_subset.npz       (~300-500 MB)
+```
+
+**Models:**
+```
+models/
+├── compression_ae_latent32.keras   (~80MB)
+├── compression_ae_latent64.keras   (~80MB)
+├── compression_ae_latent128.keras  (~82MB)
+├── compression_ae_latent256.keras  (~85MB)
+├── anomaly_ae.keras                (~80MB)
+└── denoising_ae.keras              (~80MB)
+```
+
+Total: ~800 MB - 1 GB (well within Hugging Face limits
    ```
 
 ### Expected Models
@@ -129,22 +176,41 @@ If you want to keep models private:
    # .streamlit/secrets.toml
    HF_TOKEN = "your_token_here"
    HF_REPO_ID = "your-username/autoencoders-demo"
-   ```
+   ``No 95GB COCO download needed
+   - Works on any machine with internet
 
-4. **Update code** to use token:
-   ```python
-   # In src/huggingface_utils.py
-   import os
-   HF_TOKEN = os.getenv("HF_TOKEN")
-   
-   # In download_model function:
-   downloaded_path = hf_hub_download(
-       repo_id=HF_REPO_ID,
-       filename=model_name,
-       token=HF_TOKEN,  # Add this line
-       # ... rest of parameters
-   )
-   ```
+2. **Better Learning Experience**
+   - Students focus on ML, not data engineering
+   - Introduces Hugging Face ecosystem
+   - Industry-standard practices
+   - Fast iteration and experimentation
+
+3. **Easy Maintenance**
+   - Update models without Git commits
+   - Update dataset preprocessing independently
+   - Version models and data separately
+   - Track downloads and usage
+
+4. **Cost-Effective**
+   - Free Hugging Face hosting
+   - Faster Git operations
+   - Lower storage requirements
+   - Reduced bandwidth for students
+
+### Key Advantages: Dataset Hosting
+
+**Without Hugging Face:**
+- Students download 95GB from TensorFlow Datasets
+- 30+ minutes download time
+- Requires significant disk space
+- Repeated downloads for multiple machines
+
+**With Hugging Face:**
+- Students download 300-500 MB preprocessed subset
+- ~1 minute download time
+- Minimal disk space needed
+- Cached for reuse
+- Guaranteed consistency (everyone uses same preprocessing)
 
 ## Benefits for Education
 

@@ -1,22 +1,24 @@
 """
-Utilities for downloading pre-trained models from Hugging Face Hub.
+Utilities for downloading and uploading models/datasets to Hugging Face Hub.
 
-This module provides functions to download trained autoencoder models from
-Hugging Face, making it easy for students to use pre-trained models without
-needing Git LFS or large file storage in the repository.
+This module provides functions to:
+- Download pre-trained autoencoder models from Hugging Face
+- Upload trained models to Hugging Face (requires HF_TOKEN)
+- Upload/download datasets (COCO subset)
+
+Students can use pre-trained models without configuration. Instructors can
+upload their own models by setting HF_REPO_ID and HF_TOKEN in .env file.
 """
 
 from pathlib import Path
 import os
-from huggingface_hub import hf_hub_download
+from huggingface_hub import hf_hub_download, HfApi
 
 # Hugging Face repository configuration
-# To use HF model hosting:
-# 1. Create a repository on https://huggingface.co/new
-# 2. Set HF_REPO_ID environment variable or update the default below
-# 3. Run upload_models.py to upload your trained models
-# Example: 'your-username/autoencoders-demo'
-HF_REPO_ID = os.getenv('HF_REPO_ID', 'your-username/autoencoders-demo')
+# Default: Uses public pre-trained models from mrdbourke/autoencoders-demo
+# To upload your own models: set HF_REPO_ID and HF_TOKEN in .env file
+HF_REPO_ID = os.getenv('HF_REPO_ID', 'mrdbourke/autoencoders-demo')
+HF_TOKEN = os.getenv('HF_TOKEN', None)
 
 # Model files available in the repository
 MODEL_FILES = {
@@ -129,3 +131,92 @@ def check_local_models(models_dir='models'):
         local_models[model_name] = local_path.exists()
     
     return local_models
+
+
+def upload_model(model_path, repo_path=None):
+    """
+    Upload a trained model to Hugging Face Hub.
+    
+    Requires HF_TOKEN to be set in environment (students don't need this).
+    Silently skips upload if token is not available.
+    
+    Args:
+        model_path (str or Path): Path to the local model file
+        repo_path (str, optional): Path in HF repo. If None, uses model filename
+    
+    Returns:
+        bool: True if upload succeeded, False otherwise
+    """
+    if not HF_TOKEN:
+        # Silent skip - students don't need to upload
+        return False
+    
+    try:
+        model_path = Path(model_path)
+        if not model_path.exists():
+            print(f'⚠️  Model file not found: {model_path}')
+            return False
+        
+        if repo_path is None:
+            repo_path = model_path.name
+        
+        print(f'📤 Uploading {model_path.name} to Hugging Face...')
+        
+        api = HfApi()
+        api.upload_file(
+            path_or_fileobj=str(model_path),
+            path_in_repo=repo_path,
+            repo_id=HF_REPO_ID,
+            token=HF_TOKEN,
+            repo_type='model'
+        )
+        
+        print(f'✓ Successfully uploaded to {HF_REPO_ID}/{repo_path}')
+        return True
+        
+    except Exception as e:
+        print(f'⚠️  Upload failed: {e}')
+        return False
+
+
+def upload_dataset(file_path, repo_path):
+    """
+    Upload a dataset file to Hugging Face Hub.
+    
+    Requires HF_TOKEN to be set in environment (students don't need this).
+    Silently skips upload if token is not available.
+    
+    Args:
+        file_path (str or Path): Path to the local dataset file
+        repo_path (str): Path in HF repo (e.g., 'data/coco_10percent_subset.npz')
+    
+    Returns:
+        bool: True if upload succeeded, False otherwise
+    """
+    if not HF_TOKEN:
+        # Silent skip - students don't need to upload
+        return False
+    
+    try:
+        file_path = Path(file_path)
+        if not file_path.exists():
+            print(f'⚠️  Dataset file not found: {file_path}')
+            return False
+        
+        print(f'📤 Uploading {file_path.name} to Hugging Face...')
+        
+        api = HfApi()
+        api.upload_file(
+            path_or_fileobj=str(file_path),
+            path_in_repo=repo_path,
+            repo_id=HF_REPO_ID,
+            token=HF_TOKEN,
+            repo_type='model'
+        )
+        
+        print(f'✓ Successfully uploaded to {HF_REPO_ID}/{repo_path}')
+        return True
+        
+    except Exception as e:
+        print(f'⚠️  Upload failed: {e}')
+        return False
