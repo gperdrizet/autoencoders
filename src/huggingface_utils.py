@@ -18,6 +18,7 @@ from huggingface_hub import hf_hub_download, HfApi
 try:
     from dotenv import load_dotenv
     load_dotenv()
+    
 except ImportError:
     pass  # dotenv not installed, rely on environment variables
 
