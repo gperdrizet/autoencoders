@@ -14,6 +14,13 @@ from pathlib import Path
 import os
 from huggingface_hub import hf_hub_download, HfApi
 
+# Load .env file if present
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv not installed, rely on environment variables
+
 # Hugging Face repository configuration
 # Default: Uses public pre-trained models from mrdbourke/autoencoders-demo
 # To upload your own models: set HF_REPO_ID and HF_TOKEN in .env file
