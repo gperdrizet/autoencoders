@@ -16,7 +16,7 @@ import streamlit as st
 sys.path.append(str(Path(__file__).parent.parent))
 
 # Local imports
-from src.data_utils import CIFAR10_CLASSES, create_anomaly_dataset
+from src.data_utils import FLOWER_CLASSES, create_anomaly_dataset
 from src.metrics import (
     calculate_reconstruction_error,
     compute_anomaly_threshold,
@@ -77,17 +77,21 @@ render_explanation_expander(
     """
 )
 
-st.markdown("---")
+st.markdown('---')
 
 # Load model
 @st.cache_resource
 def load_anomaly_model():
-    model_path = Path(__file__).parent.parent / 'models' / 'anomaly_ae.keras'
-    if not model_path.exists():
-        st.error(f'Model not found: {model_path}')
-        st.info('Please train the model first by running the anomaly detection notebook.')
+    from src.huggingface_utils import download_model
+    
+    model_name = 'anomaly_ae.keras'
+    try:
+        model_path = download_model(model_name, models_dir='models')
+        return load_model(model_path)
+    except Exception as e:
+        st.error(f'Failed to load model: {e}')
+        st.info('Make sure the model is uploaded to Hugging Face or train it locally.')
         st.stop()
-    return load_model(str(model_path))
 
 with show_loading_message('Loading anomaly detection model...'):
     model = load_anomaly_model()
@@ -168,7 +172,7 @@ st.markdown('## Overall performance')
 
 # Display metrics
 col1, col2, col3, col4, col5 = st.columns(5)
-col1.metric('ROC-AUC', f"{roc_metrics['auc']:.4f}")
+col1.metric('ROC-AUC', f'{roc_metrics["auc"]:.4f}')
 col2.metric('Accuracy', f'{accuracy:.4f}')
 col3.metric('Precision', f'{precision:.4f}')
 col4.metric('Recall', f'{recall:.4f}')
@@ -193,12 +197,12 @@ with tab1:
     )
     st.plotly_chart(fig_roc, use_container_width=True)
     
-    st.info(f'AUC = {roc_metrics["auc"]:.4f}: ' + 
-            ("Excellent performance! " if roc_metrics['auc'] > 0.95 else
-             "Very good performance! " if roc_metrics['auc'] > 0.9 else
-             "Good performance. " if roc_metrics['auc'] > 0.8 else
-             "Moderate performance. ") +
-            "The model can effectively distinguish between normal and anomalous images.")
+    st.info(f'AUC = {roc_metrics['auc']:.4f}: ' + 
+            ('Excellent performance! ' if roc_metrics['auc'] > 0.95 else
+             'Very good performance! ' if roc_metrics['auc'] > 0.9 else
+             'Good performance. ' if roc_metrics['auc'] > 0.8 else
+             'Moderate performance. ') +
+            'The model can effectively distinguish between normal and anomalous images.')
 
 with tab2:
     st.markdown('### Reconstruction Error Distribution')
@@ -209,7 +213,7 @@ with tab2:
     with col1:
         fig_normal = create_plotly_histogram(
             errors_normal,
-            title="Normal Data - Reconstruction Errors",
+            title='Normal Data - Reconstruction Errors',
             bins=50
         )
         st.plotly_chart(fig_normal, use_container_width=True)
@@ -220,7 +224,7 @@ with tab2:
     with col2:
         fig_anomaly = create_plotly_histogram(
             errors_anomaly,
-            title="Anomalous Data - Reconstruction Errors",
+            title='Anomalous Data - Reconstruction Errors',
             bins=50
         )
         st.plotly_chart(fig_anomaly, use_container_width=True)
@@ -229,9 +233,9 @@ with tab2:
         st.metric('Std Error (Anomaly)', f'{np.std(errors_anomaly):.6f}')
     
     # Show threshold line
-    st.markdown(f"**Current Threshold**: {threshold:.6f}")
+    st.markdown(f'**Current Threshold**: {threshold:.6f}')
     separation = (np.mean(errors_anomaly) - np.mean(errors_normal)) / np.mean(errors_normal) * 100
-    st.success(f"Anomalous errors are {separation:.1f}% higher than normal errors on average")
+    st.success(f'Anomalous errors are {separation:.1f}% higher than normal errors on average')
 
 with tab3:
     st.markdown('### Confusion Matrix')
@@ -285,13 +289,13 @@ with analysis_tab1:
     for i, idx in enumerate(top_indices[:5]):
         with cols[i]:
             st.image(data['x_test_anomaly'][idx], use_container_width=True)
-            st.caption(f"Error: {errors_anomaly[idx]:.4f}")
+            st.caption(f'Error: {errors_anomaly[idx]:.4f}')
     
     cols = st.columns(5)
     for i, idx in enumerate(top_indices[5:10]):
         with cols[i]:
             st.image(data['x_test_anomaly'][idx], use_container_width=True)
-            st.caption(f"Error: {errors_anomaly[idx]:.4f}")
+            st.caption(f'Error: {errors_anomaly[idx]:.4f}')
 
 with analysis_tab2:
     st.markdown('### False Negatives (Missed Anomalies)')
@@ -309,14 +313,14 @@ with analysis_tab2:
             if i < len(sorted_missed):
                 with cols[i]:
                     st.image(data['x_test_anomaly'][idx], use_container_width=True)
-                    st.caption(f"Error: {errors_anomaly[idx]:.4f}")
+                    st.caption(f'Error: {errors_anomaly[idx]:.4f}')
         
         cols = st.columns(5)
         for i, idx in enumerate(sorted_missed[5:10]):
             if i < len(sorted_missed[5:]):
                 with cols[i]:
                     st.image(data['x_test_anomaly'][idx], use_container_width=True)
-                    st.caption(f"Error: {errors_anomaly[idx]:.4f}")
+                    st.caption(f'Error: {errors_anomaly[idx]:.4f}')
         
         st.warning(f'{missed_mask.sum()} anomalies ({missed_mask.sum()/len(errors_anomaly)*100:.1f}%) were not detected')
     else:
@@ -338,18 +342,18 @@ with analysis_tab3:
             if i < len(sorted_flagged):
                 with cols[i]:
                     st.image(data['x_test_normal'][idx], use_container_width=True)
-                    st.caption(f"Error: {errors_normal[idx]:.4f}")
+                    st.caption(f'Error: {errors_normal[idx]:.4f}')
         
         cols = st.columns(5)
         for i, idx in enumerate(sorted_flagged[5:10]):
             if i < len(sorted_flagged[5:]):
                 with cols[i]:
                     st.image(data['x_test_normal'][idx], use_container_width=True)
-                    st.caption(f"Error: {errors_normal[idx]:.4f}")
+                    st.caption(f'Error: {errors_normal[idx]:.4f}')
         
-        st.warning(f"{flagged_mask.sum()} normal images ({flagged_mask.sum()/len(errors_normal)*100:.1f}%) were incorrectly flagged")
+        st.warning(f'{flagged_mask.sum()} normal images ({flagged_mask.sum()/len(errors_normal)*100:.1f}%) were incorrectly flagged')
     else:
-        st.success("No normal images were incorrectly flagged!")
+        st.success('No normal images were incorrectly flagged!')
 
 # Detailed image analysis
 st.markdown('---')
@@ -373,9 +377,9 @@ with col1:
     
     is_flagged = normal_error > threshold
     if is_flagged:
-        st.error(f"Flagged as anomaly (Error: {normal_error:.6f})")
+        st.error(f'Flagged as anomaly (Error: {normal_error:.6f})')
     else:
-        st.success(f"Classified as normal (Error: {normal_error:.6f})")
+        st.success(f'Classified as normal (Error: {normal_error:.6f})')
     
     st.metric('Reconstruction Error', f'{normal_error:.6f}')
     
@@ -399,9 +403,9 @@ with col2:
     
     is_detected = anomaly_error > threshold
     if is_detected:
-        st.success(f"Detected as anomaly (Error: {anomaly_error:.6f})")
+        st.success(f'Detected as anomaly (Error: {anomaly_error:.6f})')
     else:
-        st.error(f"Missed (Error: {anomaly_error:.6f})")
+        st.error(f'Missed (Error: {anomaly_error:.6f})')
     
     st.metric('Reconstruction Error', f'{anomaly_error:.6f}')
     
@@ -445,8 +449,8 @@ with st.expander('Understanding anomaly detection'):
 
 # Sidebar stats
 with st.sidebar:
-    st.markdown("---")
-    st.markdown("## Dataset stats")
+    st.markdown('---')
+    st.markdown('## Dataset stats')
     st.info(f"""
     **Normal Test Samples**: {len(errors_normal)}
     

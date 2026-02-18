@@ -16,7 +16,7 @@ import streamlit as st
 sys.path.append(str(Path(__file__).parent.parent))
 
 # Local imports
-from src.data_utils import CIFAR10_CLASSES, load_cifar10, preprocess_image
+from src.data_utils import FLOWER_CLASSES, load_flowers, preprocess_image
 from src.metrics import compute_metrics_summary
 from src.model_utils import load_model
 from src.visualization import create_plotly_comparison, create_plotly_heatmap
@@ -50,15 +50,15 @@ render_explanation_expander(
     """
     An autoencoder compresses images by:
     
-    1. **Encoding**: The encoder network reduces the 32×32×3 (3,072) image to a smaller latent vector
+    1. **Encoding**: The encoder network reduces the 64x64x3 (12,288) image to a smaller latent vector
     2. **Bottleneck**: Information is forced through this compressed representation
     3. **Decoding**: The decoder reconstructs the image from the latent vector
     
     **Compression Ratio**: Original size / Latent size
-    - Latent 32: ~96× compression (3,072 / 32)
-    - Latent 64: ~48× compression
-    - Latent 128: ~24× compression
-    - Latent 256: ~12× compression
+    - Latent 32: ~384x compression (12,288 / 32)
+    - Latent 64: ~192x compression
+    - Latent 128: ~96x compression
+    - Latent 256: ~48x compression
     
     **Trade-off**: Higher compression = more information loss = lower quality
     
@@ -79,18 +79,22 @@ selected_latent = st.sidebar.selectbox(
     'Select Compression Level:',
     latent_dims,
     index=2,  # Default to 128
-    format_func=lambda x: f'Latent {x} ({3072/x:.1f}× compression)'
+    format_func=lambda x: f'Latent {x} ({12288/x:.1f}x compression)'
 )
 
 # Load model
 @st.cache_resource
 def load_compression_model(latent_dim):
-    model_path = Path(__file__).parent.parent / 'models' / f'compression_ae_latent{latent_dim}.keras'
-    if not model_path.exists():
-        st.error(f'Model not found: {model_path}')
-        st.info('Please train the models first by running the training notebooks.')
+    from src.huggingface_utils import download_model
+    
+    model_name = f'compression_ae_latent{latent_dim}.keras'
+    try:
+        model_path = download_model(model_name, models_dir='models')
+        return load_model(model_path)
+    except Exception as e:
+        st.error(f'Failed to load model: {e}')
+        st.info('Make sure the models are uploaded to Hugging Face or train them locally.')
         st.stop()
-    return load_model(str(model_path))
 
 with show_loading_message(f'Loading compression model (latent {selected_latent})...'):
     model = load_compression_model(selected_latent)
@@ -101,7 +105,7 @@ render_model_info_sidebar(model, f'Compression AE (Latent {selected_latent})')
 # Load dataset
 @st.cache_data
 def load_dataset():
-    (x_train, y_train), (x_test, y_test) = load_cifar10(normalize=True)
+    (x_train, y_train), (x_test, y_test) = load_flowers(normalize=True)
     return x_test, y_test
 
 x_test, y_test = load_dataset()
@@ -114,7 +118,7 @@ tab1, tab2 = st.tabs(['From dataset', 'Upload your own'])
 
 with tab1:
     selected_image, selected_label, selected_idx = render_sample_selector(
-        x_test, y_test, CIFAR10_CLASSES, key='compression'
+        x_test, y_test, FLOWER_CLASSES, key='compression'
     )
     input_image = selected_image
 
@@ -149,10 +153,10 @@ if input_image is not None:
     # Display metrics
     st.markdown('### Quality metrics')
     render_metrics_display({
-        'Compression Ratio': f"{metrics['compression_ratio']:.1f}×",
-        'MSE': f"{metrics['mse']:.6f}",
-        'PSNR': f"{metrics['psnr']:.2f} dB",
-        'SSIM': f"{metrics['ssim']:.4f}"
+        'Compression Ratio': f'{metrics["compression_ratio"]:.1f}x',
+        'MSE': f'{metrics["mse"]:.6f}',
+        'PSNR': f'{metrics["psnr"]:.2f} dB',
+        'SSIM': f'{metrics["ssim"]:.4f}'
     }, columns=4)
     
     st.markdown('---')
@@ -200,9 +204,9 @@ if input_image is not None:
     with st.expander('Detailed analysis'):
         st.markdown(f"""
         **Compression Details:**
-        - Original size: 3,072 values (32 × 32 × 3)
+        - Original size: 12,288 values (64 x 64 x 3)
         - Latent size: {selected_latent} values
-        - Size reduction: {100 * (1 - selected_latent/3072):.1f}%
+        - Size reduction: {100 * (1 - selected_latent/12288):.1f}%
         
         **Quality Assessment:**
         - MSE of {metrics['mse']:.6f} indicates {'low' if metrics['mse'] < 0.01 else 'moderate' if metrics['mse'] < 0.02 else 'high'} reconstruction error
@@ -243,9 +247,9 @@ if st.button('Generate Comparison Across All Latent Dimensions'):
             with cols[idx]:
                 st.image(reconstructed_comp, 
                         caption=f'Latent {latent_dim}', use_container_width=True)
-                st.metric("Compression", f"{metrics_comp['compression_ratio']:.1f}×")
-                st.metric("PSNR", f"{metrics_comp['psnr']:.1f} dB")
-                st.metric("SSIM", f"{metrics_comp['ssim']:.3f}")
+                st.metric('Compression', f'{metrics_comp["compression_ratio"]:.1f}x')
+                st.metric('PSNR', f'{metrics_comp["psnr"]:.1f} dB')
+                st.metric('SSIM', f'{metrics_comp["ssim"]:.3f}')
     else:
         st.warning('Please select or upload an image first!')
 
@@ -293,7 +297,7 @@ with st.sidebar:
     st.info(f"""
     **Latent Dimension**: {selected_latent}
     
-    **Compression Ratio**: {3072/selected_latent:.1f}×
+    **Compression Ratio**: {12288/selected_latent:.1f}x
     
-    **Size Reduction**: {100 * (1 - selected_latent/3072):.1f}%
+    **Size Reduction**: {100 * (1 - selected_latent/12288):.1f}%
     """)

@@ -37,7 +37,7 @@ def render_model_info_sidebar(model, model_name='Model'):
         
         total_params = model.count_params()
         
-        st.metric("Total Parameters", f"{total_params:,}")
+        st.metric('Total Parameters', f'{total_params:,}')
         st.metric('Layers', len(model.layers))
         
         if hasattr(model, 'input_shape'):
@@ -124,8 +124,8 @@ def render_sample_selector(x_data, y_data, class_names, key='sample'):
     
     with col2:
         # Index selector
-        if f"{key}_idx" not in st.session_state:
-            st.session_state[f"{key}_idx"] = valid_indices[0]
+        if f'{key}_idx' not in st.session_state:
+            st.session_state[f'{key}_idx'] = valid_indices[0]
         
         selected_idx = st.number_input(
             'Image index:',
@@ -141,7 +141,7 @@ def render_sample_selector(x_data, y_data, class_names, key='sample'):
     # Display selected image
     col1, col2 = st.columns([1, 2])
     with col1:
-        st.image(selected_image, caption=f"{class_names[selected_label]} (#{selected_idx})", 
+        st.image(selected_image, caption=f'{class_names[selected_label]} (#{selected_idx})', 
                 use_container_width=True)
     
     return selected_image, selected_label, selected_idx

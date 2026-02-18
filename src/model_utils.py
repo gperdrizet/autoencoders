@@ -12,13 +12,13 @@ from tensorflow import keras
 from tensorflow.keras import layers
 
 
-def build_compression_ae(latent_dim=128, input_shape=(32, 32, 3)):
+def build_compression_ae(latent_dim=128, input_shape=(64, 64, 3)):
     """
     Build a convolutional autoencoder for image compression.
     
     Args:
         latent_dim: Dimension of the latent representation
-        input_shape: Shape of input images (default: CIFAR-10 size)
+        input_shape: Shape of input images (default: 64x64 for flowers)
     
     Returns:
         Keras Model instance
@@ -46,8 +46,8 @@ def build_compression_ae(latent_dim=128, input_shape=(32, 32, 3)):
     # Decoder
     decoder_input = layers.Input(shape=(latent_dim,), name='decoder_input')
     
-    x = layers.Dense(2 * 2 * 512, activation='relu')(decoder_input)
-    x = layers.Reshape((2, 2, 512))(x)
+    x = layers.Dense(4 * 4 * 512, activation='relu')(decoder_input)
+    x = layers.Reshape((4, 4, 512))(x)
     
     x = layers.Conv2DTranspose(512, 3, strides=2, padding='same', activation='relu', name='dec_conv1')(x)
     x = layers.BatchNormalization()(x)
@@ -72,7 +72,7 @@ def build_compression_ae(latent_dim=128, input_shape=(32, 32, 3)):
     return autoencoder, encoder, decoder
 
 
-def build_anomaly_ae(latent_dim=128, input_shape=(32, 32, 3)):
+def build_anomaly_ae(latent_dim=128, input_shape=(64, 64, 3)):
     """
     Build a convolutional autoencoder for anomaly detection.
     Uses same architecture as compression AE.
@@ -99,7 +99,7 @@ class Sampling(layers.Layer):
         return z_mean + tf.exp(0.5 * z_log_var) * epsilon
 
 
-def build_vae(latent_dim=128, input_shape=(32, 32, 3)):
+def build_vae(latent_dim=128, input_shape=(64, 64, 3)):
     """
     Build a Variational Autoencoder (VAE) for image generation.
     
@@ -137,8 +137,8 @@ def build_vae(latent_dim=128, input_shape=(32, 32, 3)):
     # Decoder
     decoder_input = layers.Input(shape=(latent_dim,), name='decoder_input')
     
-    x = layers.Dense(2 * 2 * 512, activation='relu')(decoder_input)
-    x = layers.Reshape((2, 2, 512))(x)
+    x = layers.Dense(4 * 4 * 512, activation='relu')(decoder_input)
+    x = layers.Reshape((4, 4, 512))(x)
     
     x = layers.Conv2DTranspose(512, 3, strides=2, padding='same', activation='relu')(x)
     x = layers.BatchNormalization()(x)
@@ -192,7 +192,7 @@ def build_vae(latent_dim=128, input_shape=(32, 32, 3)):
                     tf.reduce_sum(1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var), axis=1)
                 )
                 
-                # Total loss (beta-VAE with beta=0.0005 for CIFAR-10)
+                # Total loss (beta-VAE with beta=0.0005 for flowers dataset)
                 total_loss = reconstruction_loss + 0.0005 * kl_loss
             
             grads = tape.gradient(total_loss, self.trainable_weights)

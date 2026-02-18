@@ -16,7 +16,7 @@ import streamlit as st
 sys.path.append(str(Path(__file__).parent.parent))
 
 # Local imports
-from src.data_utils import CIFAR10_CLASSES, load_cifar10
+from src.data_utils import FLOWER_CLASSES, load_flowers
 from src.model_utils import load_model
 from src.streamlit_components import (
     render_header,
@@ -68,7 +68,7 @@ render_explanation_expander(
     
     **The Magic of VAEs:**
     - The latent space is **continuous and smooth**
-    - Points close together → similar images
+    - Points close together = similar images
     - We can **interpolate** between images
     - We can sample **random points** to generate new images
     
@@ -90,21 +90,23 @@ st.markdown('---')
 # Load model
 @st.cache_resource
 def load_vae_model():
-    model_path = Path(__file__).parent.parent / 'models' / 'vae.keras'
-    if not model_path.exists():
-        st.error(f'Model not found: {model_path}')
-        st.info('Please train the VAE model first by running the generation notebook.')
-        st.stop()
-    
-    # VAE needs custom objects
+    from src.huggingface_utils import download_model
     from src.model_utils import Sampling
-    model = load_model(str(model_path))
     
-    # Extract encoder and decoder
-    encoder = model.encoder
-    decoder = model.decoder
-    
-    return model, encoder, decoder
+    model_name = 'vae.keras'
+    try:
+        model_path = download_model(model_name, models_dir='models')
+        model = load_model(model_path)
+        
+        # Extract encoder and decoder
+        encoder = model.encoder
+        decoder = model.decoder
+        
+        return model, encoder, decoder
+    except Exception as e:
+        st.error(f'Failed to load model: {e}')
+        st.info('Make sure the VAE model is uploaded to Hugging Face or train it locally.')
+        st.stop()
 
 with show_loading_message('Loading VAE model...'):
     vae, encoder, decoder = load_vae_model()
@@ -121,7 +123,7 @@ st.sidebar.markdown(f'**Latent Dimension**: {latent_dim}')
 # Load dataset
 @st.cache_data
 def load_dataset():
-    (x_train, y_train), (x_test, y_test) = load_cifar10(normalize=True)
+    (x_train, y_train), (x_test, y_test) = load_flowers(normalize=True)
     return x_test, y_test
 
 x_test, y_test = load_dataset()
@@ -206,9 +208,9 @@ if mode == 'Random generation':
         - Pass through the decoder to generate images
         
         **Temperature parameter:**
-        - **Low (0.5)**: Samples close to mean → more "average" images
-        - **Medium (1.0)**: Standard sampling → balanced diversity
-        - **High (2.0)**: Wider sampling → more unusual/diverse images
+        - **Low (0.5)**: Samples close to mean = more "average" images
+        - **Medium (1.0)**: Standard sampling = balanced diversity
+        - **High (2.0)**: Wider sampling = more unusual/diverse images
         
         **What to expect:**
         - Some images will look realistic
@@ -278,7 +280,7 @@ elif mode == 'Interpolation':
     # Render interpolation controls
     result = render_interpolation_controls(
         encoder, decoder, x_test, y_test,
-        class_names=CIFAR10_CLASSES,
+        class_names=FLOWER_CLASSES,
         key_prefix='vae_interp'
     )
     
@@ -292,7 +294,7 @@ elif mode == 'Interpolation':
         **Why is it smooth?**
         - VAEs learn a continuous latent space
         - KL divergence regularization ensures smoothness
-        - Points close together in latent space → similar images
+        - Points close together in latent space = similar images
         
         **Applications:**
         - Morphing animations
@@ -341,8 +343,8 @@ else:  # Latent Arithmetic
         
         **Limitations:**
         - Results aren't always meaningful
-        - CIFAR-10 is low resolution (32×32)
-        - Small dataset → limited feature learning
+        - TF Flowers is relatively small
+        - Small dataset = limited feature learning
         - Works better with larger, more diverse datasets
         """)
 
@@ -370,7 +372,7 @@ with show_loading_message('Computing statistics...'):
 col1.metric('Avg Reconstruction MSE', f'{np.mean(mse_values):.6f}')
 col2.metric('Avg PSNR', f'{np.mean(psnr_values):.2f} dB')
 col3.metric('Latent Dimension', latent_dim)
-col4.metric('Compression Ratio', f'{3072/latent_dim:.1f}×')
+col4.metric('Compression Ratio', f'{12288/latent_dim:.1f}x')
 
 # Reconstruction comparison
 with st.expander('Reconstruction quality examples'):
@@ -402,8 +404,8 @@ with st.expander('Learn more about VAEs'):
     ### Key Concepts
     
     **1. Probabilistic Encoding**
-    - Standard AE: x → z (deterministic)
-    - VAE: x → (μ, σ²) → z (probabilistic)
+    - Standard AE: x to z (deterministic)
+    - VAE: x to (mu, sigma^2) to z (probabilistic)
     - Enables sampling and generation
     
     **2. Reparameterization Trick**
@@ -413,7 +415,7 @@ with st.expander('Learn more about VAEs'):
     
     **3. Loss Function**
     ```
-    Total Loss = Reconstruction Loss + β × KL Divergence
+    Total Loss = Reconstruction Loss + beta * KL Divergence
     
     Reconstruction: How well can we reconstruct the input?
     KL Divergence: How close is q(z|x) to N(0,1)?
@@ -423,7 +425,7 @@ with st.expander('Learn more about VAEs'):
     - Vary β to control the trade-off
     - Higher β: More regularization, better generation, blurrier reconstructions
     - Lower β: Better reconstruction, less structured latent space
-    - This model uses β = 0.0005 for CIFAR-10
+    - This model uses beta = 0.0005 for TF Flowers dataset
     
     ### Applications Beyond This Demo
     

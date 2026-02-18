@@ -4,7 +4,7 @@ Interactive demonstrations of autoencoder applications for AI/ML bootcamp studen
 
 ## Overview
 
-This repository contains three comprehensive demonstrations showing the power and versatility of autoencoders using the CIFAR-10 dataset:
+This repository contains three comprehensive demonstrations showing the power and versatility of autoencoders using the TF Flowers dataset:
 
 1. **Image compression** - Compress images while maintaining quality
 2. **Anomaly detection** - Identify unusual patterns using reconstruction error
@@ -43,6 +43,15 @@ Each demo includes:
    pip install -r requirements-cloud.txt
    ```
 
+3. **Configure Hugging Face (Optional)**
+   
+   Pre-trained models are hosted on Hugging Face and will download automatically. To use your own models:
+   
+   ```bash
+   cp .env.example .env
+   # Edit .env and set your HF_REPO_ID
+   ```
+
 ### Running the Demos
 
 #### Option 1: Streamlit Web App (Recommended)
@@ -54,6 +63,8 @@ streamlit run app.py
 ```
 
 Then navigate to `http://localhost:8501` in your browser.
+
+**Note:** Pre-trained models will automatically download from Hugging Face on first use. This may take a few minutes depending on your connection.
 
 #### Option 2: Training Notebooks
 
@@ -84,24 +95,27 @@ autoencoders/
 ├── src/                           # Shared utilities
 │   ├── __init__.py
 │   ├── model_utils.py            # Model architectures & loading
-│   ├── data_utils.py             # CIFAR-10 loading & preprocessing
+│   ├── data_utils.py             # TF Flowers loading & preprocessing
 │   ├── visualization.py          # Plotting functions
 │   ├── metrics.py                # Quality metrics
 │   ├── vae_navigation.py         # VAE interactive components
-│   └── streamlit_components.py   # Reusable UI components
-├── models/                        # Saved models (after training)
+│   ├── streamlit_components.py   # Reusable UI components
+│   └── huggingface_utils.py      # Model download utilities
+├── models/                        # Saved models (auto-downloaded from HF)
 │   ├── compression_ae_latent32.keras
 │   ├── compression_ae_latent64.keras
 │   ├── compression_ae_latent128.keras
 │   ├── compression_ae_latent256.keras
 │   ├── anomaly_ae.keras
 │   └── vae.keras
-├── data/                          # CIFAR-10 cache (auto-downloaded)
+├── data/                          # TF Flowers cache (auto-downloaded)
 ├── logs/                          # TensorBoard logs
 ├── .streamlit/                    # Streamlit configuration
 │   └── config.toml
+├── upload_models.py               # Script to upload models to HF
 ├── requirements.txt               # Local development dependencies
 ├── requirements-cloud.txt         # Cloud deployment dependencies
+├── .env.example                   # Environment configuration template
 └── README.md                      # This file
 ```
 
@@ -110,7 +124,7 @@ autoencoders/
 ### 1. Image compression
 
 **What it does:**
-- Compresses 32×32 RGB images into smaller latent representations
+- Compresses 32x32 RGB images into smaller latent representations
 - Reconstructs images from compressed form
 - Compares quality across different compression ratios
 
@@ -122,17 +136,17 @@ autoencoders/
 - Difference heatmaps
 
 **Compression Ratios:**
-- Latent 32: ~96× compression
-- Latent 64: ~48× compression
-- Latent 128: ~24× compression
-- Latent 256: ~12× compression
+- Latent 32: ~96x compression
+- Latent 64: ~48x compression
+- Latent 128: ~24x compression
+- Latent 256: ~12x compression
 
 ### 2. Anomaly detection
 
 **What it does:**
 - Detects unusual/anomalous patterns in images
 - Uses reconstruction error as anomaly score
-- Trained on 8 CIFAR-10 classes, detects remaining 2 as anomalies
+- Trained on 4 flower classes, detects roses as anomalies
 
 **Key Features:**
 - Adjustable detection threshold
@@ -166,7 +180,9 @@ autoencoders/
 - Reparameterization trick for gradients
 - Continuous, structured latent space
 
-## ## Training the models
+## Training the models
+
+**Note:** Pre-trained models are available on [Hugging Face Hub](https://huggingface.co/your-username/autoencoders-demo) and will download automatically when you run the app. You only need to train models if you want to experiment with different architectures or hyperparameters.
 
 ### Step 1: Compression Autoencoders
 
@@ -183,8 +199,8 @@ Run `notebooks/01-compression.ipynb` to train models with different latent dimen
 
 Run `notebooks/02-anomaly_detection.ipynb` to train the anomaly detector:
 
-- Trains on 8 CIFAR-10 classes (airplane, automobile, bird, cat, deer, dog, frog, horse)
-- Uses ship and truck as anomalies
+- Trains on 4 flower classes (dandelion, daisy, tulips, sunflowers)
+- Uses roses as anomalies
 - ~50 epochs
 - Saves to `models/anomaly_ae.keras`
 - Includes ROC analysis and threshold optimization
@@ -195,12 +211,36 @@ Run `notebooks/02-anomaly_detection.ipynb` to train the anomaly detector:
 
 Run `notebooks/03-generation.ipynb` to train the VAE:
 
-- Trains on all CIFAR-10 classes
+- Trains on all flower classes
 - ~100 epochs (VAEs need more training)
 - Saves to `models/vae.keras`
 - Includes interpolation and latent space visualization
 
 **Training Time:** ~60-90 minutes on GPU, ~4-6 hours on CPU
+
+### Uploading Models to Hugging Face
+
+After training your models, you can upload them to Hugging Face:
+
+1. **Create a Hugging Face account**
+   - Sign up at [huggingface.co](https://huggingface.co)
+   - Create a new model repository
+
+2. **Login via CLI**
+   ```bash
+   pip install huggingface-hub
+   huggingface-cli login
+   ```
+
+3. **Upload your models**
+   ```bash
+   python upload_models.py --repo-id your-username/autoencoders-demo
+   ```
+
+4. **Update configuration**
+   - Edit `src/huggingface_utils.py`
+   - Set `HF_REPO_ID = "your-username/autoencoders-demo"`
+   - Commit and push changes
 
 ## Using the Streamlit app
 
@@ -232,7 +272,8 @@ The app will open at `http://localhost:8501`
 3. **Configuration**
    - Uses `requirements-cloud.txt` automatically
    - TensorFlow CPU version for smaller footprint
-   - Float16 quantized models recommended for 1GB RAM limit
+   - Models download automatically from Hugging Face
+   - Set `HF_REPO_ID` in Streamlit Cloud secrets if using a private repository
 
 ## Model details
 
@@ -242,31 +283,31 @@ All models use **4-5 layer convolutional architectures**:
 
 **Encoder:**
 ```
-Input (32×32×3)
-  ↓ Conv2D(64) + BN + ReLU
-  ↓ Conv2D(128) + BN + ReLU
-  ↓ Conv2D(256) + BN + ReLU
-  ↓ Conv2D(512) + BN + ReLU
-  ↓ Flatten → Dense(latent_dim)
+Input (32x32x3)
+  | Conv2D(64) + BN + ReLU
+  | Conv2D(128) + BN + ReLU
+  | Conv2D(256) + BN + ReLU
+  | Conv2D(512) + BN + ReLU
+  | Flatten -> Dense(latent_dim)
 Latent Vector
 ```
 
 **Decoder:**
 ```
 Latent Vector
-  ↓ Dense(2×2×512) → Reshape
-  ↓ Conv2DTranspose(512) + BN + ReLU
-  ↓ Conv2DTranspose(256) + BN + ReLU
-  ↓ Conv2DTranspose(128) + BN + ReLU
-  ↓ Conv2DTranspose(64) + BN + ReLU
-  ↓ Conv2D(3) + Sigmoid
-Output (32×32×3)
+  | Dense(2x2x512) -> Reshape
+  | Conv2DTranspose(512) + BN + ReLU
+  | Conv2DTranspose(256) + BN + ReLU
+  | Conv2DTranspose(128) + BN + ReLU
+  | Conv2DTranspose(64) + BN + ReLU
+  | Conv2D(3) + Sigmoid
+Output (32x32x3)
 ```
 
 **VAE Differences:**
 - Encoder outputs `z_mean` and `z_log_var`
 - Sampling layer with reparameterization trick
-- Loss = Reconstruction + β×KL Divergence (β=0.0005)
+- Loss = Reconstruction + beta*KL Divergence (beta=0.0005)
 
 ### Training Configuration
 
@@ -311,10 +352,16 @@ The codebase follows:
 
 ### Further Reading
 
+**Autoencoders & VAEs:**
 - [Original VAE Paper](https://arxiv.org/abs/1312.6114) - Kingma & Welling, 2013
 - [β-VAE](https://openreview.net/forum?id=Sy2fzU9gl) - Higgins et al., 2017
 - [Understanding VAEs](https://arxiv.org/abs/1606.05908) - Doersch, 2016
 - [Anomaly Detection Survey](https://arxiv.org/abs/2007.02500)
+
+**Hugging Face Resources:**
+- [Hugging Face Hub Documentation](https://huggingface.co/docs/hub)
+- [Model Hosting Guide](https://huggingface.co/docs/hub/models)
+- [Getting Started with Hub](https://huggingface.co/docs/huggingface_hub/quick-start)
 
 ## ## Contributing
 
@@ -331,7 +378,8 @@ MIT License - see LICENSE file for details
 
 ## ## Acknowledgments
 
-- CIFAR-10 dataset: [Learning Multiple Layers of Features from Tiny Images](https://www.cs.toronto.edu/~kriz/learning-features-2009-TR.pdf)
+- TF Flowers dataset from TensorFlow Datasets
+- CIFAR-10 dataset (original base for this repo): [Learning Multiple Layers of Features from Tiny Images](https://www.cs.toronto.edu/~kriz/learning-features-2009-TR.pdf)
 - TensorFlow/Keras team
 - Streamlit team
 - AI/ML Bootcamp students and instructors

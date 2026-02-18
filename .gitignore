@@ -21,6 +21,9 @@ wheels/
 .installed.cfg
 *.egg
 
+# Environment Variables
+.env
+
 # Jupyter Notebook
 .ipynb_checkpoints
 *.ipynb_checkpoints/
@@ -45,9 +48,10 @@ data/
 *.h5
 *.hdf5
 
-# Model files (comment out if you want to commit trained models)
-# models/*.keras
-# models/*.h5
+# Model files (stored on Hugging Face Hub)
+models/*.keras
+models/*.h5
+models/.cache/
 
 # Logs
 logs/

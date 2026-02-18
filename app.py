@@ -2,7 +2,7 @@
 Autoencoder Demonstrations - Interactive Web App
 
 Welcome to the autoencoder demo app! This application provides interactive
-demonstrations of three key autoencoder applications on the CIFAR-10 dataset.
+demonstrations of three key autoencoder applications on the TF Flowers dataset.
 """
 
 # Standard library imports
@@ -38,7 +38,7 @@ st.markdown("""
 ## Welcome to the autoencoder demo app
 
 This application provides hands-on, interactive demonstrations of **three key applications** 
-of autoencoders using the CIFAR-10 dataset.
+of autoencoders using the TF Flowers dataset.
 
 ### What are Autoencoders?
 
@@ -126,9 +126,10 @@ with st.expander('Technical details'):
     st.markdown("""
     ### About the Models
     
-    All models in this demo are trained on the **CIFAR-10 dataset**:
-    - 60,000 32×32 color images
-    - 10 classes: airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck
+    All models in this demo are trained on the **TF Flowers dataset**:
+    - 5 classes: dandelion, daisy, tulips, sunflowers, roses
+    - ~3,700 color photos of flowers
+    - Images resized to 64x64 RGB for consistent processing
     
     ### Architecture
     
@@ -173,7 +174,7 @@ Each demo includes:
 
 # Footer
 st.markdown('---')
-st.markdown('<div style="text-align: center; color: #666; font-size: 0.9em;">\n    <p>Built with Streamlit • Powered by TensorFlow/Keras</p>\n    <p>For educational purposes • AI/ML Bootcamp</p>\n</div>\n', unsafe_allow_html=True)
+st.markdown('<div style='text-align: center; color: #666; font-size: 0.9em;'>\n    <p>Built with Streamlit | Powered by TensorFlow/Keras</p>\n    <p>For educational purposes | AI/ML Bootcamp</p>\n</div>\n', unsafe_allow_html=True)
 
 # Sidebar info
 with st.sidebar:
@@ -199,5 +200,5 @@ with st.sidebar:
     2. **Anomaly Detection** - Find outliers
     3. **Generation** - Create new images
     
-    All models are trained on CIFAR-10 (32×32 RGB images).
+    All models are trained on TF Flowers (64x64 RGB images).
     """)
