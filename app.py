@@ -2,7 +2,7 @@
 Autoencoder Demonstrations - Interactive Web App
 
 Welcome to the autoencoder demo app! This application provides interactive
-demonstrations of three key autoencoder applications on the TF Flowers dataset.
+demonstrations of three key autoencoder applications.
 """
 
 # Standard library imports
@@ -38,7 +38,7 @@ st.markdown("""
 ## Welcome to the autoencoder demo app
 
 This application provides hands-on, interactive demonstrations of **three key applications** 
-of autoencoders using the TF Flowers dataset.
+of autoencoders using real-world datasets.
 
 ### What are Autoencoders?
 
@@ -100,23 +100,23 @@ with col2:
 
 with col3:
     st.markdown("""
-    ### VAE generation
+    ### Image denoising
     
     **What it does:**
-    - Generates brand new, synthetic images
-    - Explores smooth latent space
+    - Removes noise from corrupted images
+    - Restores clean images from noisy inputs
     
     **Key Features:**
-    - Random image generation
-    - Latent space navigation
-    - Image interpolation
-    - Latent arithmetic
+    - Multiple noise types (Gaussian, Salt & Pepper, Speckle)
+    - Adjustable noise levels
+    - Quality improvement metrics
+    - Visual comparisons
     
     **Use Cases:**
-    - Creative content generation
-    - Data augmentation
-    - Design exploration
-    - Drug discovery
+    - Photo restoration
+    - Medical image enhancement
+    - Satellite image processing
+    - Old photo restoration
     """)
 
 st.markdown('---')
@@ -124,36 +124,43 @@ st.markdown('---')
 # Technical details
 with st.expander('Technical details'):
     st.markdown("""
-    ### About the Models
+    ### About the Datasets
     
-    All models in this demo are trained on the **TF Flowers dataset**:
+    **COCO 2017** (for Compression & Denoising):
+    - 10% subset (~11,800 images)
+    - 80 diverse object categories
+    - Images resized to 64x64 RGB
+    - Rich variety: people, vehicles, animals, objects, scenes
+    
+    **TF Flowers** (for Anomaly Detection):
     - 5 classes: dandelion, daisy, tulips, sunflowers, roses
     - ~3,700 color photos of flowers
-    - Images resized to 64x64 RGB for consistent processing
+    - Images resized to 64x64 RGB
+    - Used as 'normal' data; COCO images as 'anomalies'
     
     ### Architecture
     
-    - **Compression & Anomaly Detection**: Standard Convolutional Autoencoders
+    - **Compression & Denoising**: Convolutional Autoencoders
         - 4-5 convolutional layers in encoder and decoder
-        - Various latent dimensions (32, 64, 128, 256)
+        - Various latent dimensions (32, 64, 128, 256) for compression
         - BatchNormalization for stable training
     
-    - **Generation**: Variational Autoencoder (VAE)
-        - Probabilistic latent space
-        - Reparameterization trick for backpropagation
-        - KL divergence regularization
+    - **Anomaly Detection**: Trained only on flowers
+        - Uses reconstruction error for detection
+        - Higher error = likely anomaly (non-flower)
     
     ### Training
     
     - Framework: TensorFlow/Keras
     - Optimizer: Adam
-    - Loss: MSE (compression/anomaly), MSE + KL divergence (VAE)
-    - Epochs: 50-100 depending on model
+    - Loss: MSE (all models)
+    - Epochs: 20-50 depending on model
+    - GPU accelerated training
     
     ### Source Code
     
     All source code and training notebooks are available in the GitHub repository.
-    Models are saved in `.keras` format with float16 quantization for deployment.
+    Models are saved in `.keras` format and can be downloaded from Hugging Face.
     """)
 
 # How to use
@@ -174,7 +181,7 @@ Each demo includes:
 
 # Footer
 st.markdown('---')
-st.markdown('<div style='text-align: center; color: #666; font-size: 0.9em;'>\n    <p>Built with Streamlit | Powered by TensorFlow/Keras</p>\n    <p>For educational purposes | AI/ML Bootcamp</p>\n</div>\n', unsafe_allow_html=True)
+st.markdown("<div style='text-align: center; color: #666; font-size: 0.9em;'>\n    <p>Built with Streamlit | Powered by TensorFlow/Keras</p>\n    <p>For educational purposes | AI/ML Bootcamp</p>\n</div>\n", unsafe_allow_html=True)
 
 # Sidebar info
 with st.sidebar:
@@ -196,9 +203,9 @@ with st.sidebar:
     st.markdown("""
     This app demonstrates three practical applications of autoencoders:
     
-    1. **Compression** - Reduce image size
-    2. **Anomaly Detection** - Find outliers
-    3. **Generation** - Create new images
+    1. **Compression** - Reduce image size (COCO dataset)
+    2. **Anomaly Detection** - Find outliers (flowers vs non-flowers)
+    3. **Denoising** - Remove noise from images (COCO dataset)
     
-    All models are trained on TF Flowers (64x64 RGB images).
+    Models trained on 64x64 RGB images.
     """)

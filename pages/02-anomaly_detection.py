@@ -16,7 +16,7 @@ import streamlit as st
 sys.path.append(str(Path(__file__).parent.parent))
 
 # Local imports
-from src.data_utils import FLOWER_CLASSES, create_anomaly_dataset
+from src.data_utils import FLOWER_CLASSES, COCO_CLASSES, load_flowers, load_coco
 from src.metrics import (
     calculate_reconstruction_error,
     compute_anomaly_threshold,
@@ -72,8 +72,10 @@ render_explanation_expander(
     - **AUC**: Area under ROC curve (higher is better, 1.0 is perfect)
     
     **In this demo**:
-    - Normal classes: airplane, automobile, bird, cat, deer, dog, frog, horse
-    - Anomalous classes: ship, truck
+    - Normal data: All 5 flower classes (dandelion, daisy, tulips, sunflowers, roses)
+    - Anomalous data: Random COCO images (people, vehicles, animals, objects, etc.)
+    - The model was trained only on flowers
+    - It should flag non-flower images as anomalies
     """
 )
 
@@ -102,9 +104,24 @@ render_model_info_sidebar(model, 'Anomaly Detection AE')
 # Load dataset
 @st.cache_data
 def load_anomaly_data():
-    normal_classes = [0, 1, 2, 3, 4, 5, 6, 7]  # All except ship and truck
-    data = create_anomaly_dataset(normal_classes=normal_classes, normalize=True)
-    return data
+    # Load flowers as normal data
+    (x_train_flowers, y_train_flowers), (x_test_flowers, y_test_flowers) = load_flowers(normalize=True)
+    
+    # Load COCO subset as anomalous data (use 500 random samples for testing)
+    (x_train_coco, y_train_coco), (x_test_coco, y_test_coco) = load_coco(subset_percent=10, normalize=True)
+    
+    # Sample 500 random COCO images for anomaly testing
+    n_anomaly_samples = min(500, len(x_test_coco))
+    anomaly_indices = np.random.RandomState(42).choice(len(x_test_coco), n_anomaly_samples, replace=False)
+    
+    return {
+        'x_train_normal': x_train_flowers,
+        'y_train_normal': y_train_flowers,
+        'x_test_normal': x_test_flowers,
+        'y_test_normal': y_test_flowers,
+        'x_test_anomaly': x_test_coco[anomaly_indices],
+        'y_test_anomaly': y_test_coco[anomaly_indices],
+    }
 
 data = load_anomaly_data()
 

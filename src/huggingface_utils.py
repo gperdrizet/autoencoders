@@ -11,7 +11,11 @@ import os
 from huggingface_hub import hf_hub_download
 
 # Hugging Face repository configuration
-# Update this with your actual Hugging Face username/organization
+# To use HF model hosting:
+# 1. Create a repository on https://huggingface.co/new
+# 2. Set HF_REPO_ID environment variable or update the default below
+# 3. Run upload_models.py to upload your trained models
+# Example: 'your-username/autoencoders-demo'
 HF_REPO_ID = os.getenv('HF_REPO_ID', 'your-username/autoencoders-demo')
 
 # Model files available in the repository
@@ -21,7 +25,7 @@ MODEL_FILES = {
     'compression_ae_latent128.keras': 'compression_ae_latent128.keras',
     'compression_ae_latent256.keras': 'compression_ae_latent256.keras',
     'anomaly_ae.keras': 'anomaly_ae.keras',
-    'vae.keras': 'vae.keras',
+    'denoising_ae.keras': 'denoising_ae.keras',
 }
 
 

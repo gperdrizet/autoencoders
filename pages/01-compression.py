@@ -16,7 +16,7 @@ import streamlit as st
 sys.path.append(str(Path(__file__).parent.parent))
 
 # Local imports
-from src.data_utils import FLOWER_CLASSES, load_flowers, preprocess_image
+from src.data_utils import COCO_CLASSES, load_coco, preprocess_image
 from src.metrics import compute_metrics_summary
 from src.model_utils import load_model
 from src.visualization import create_plotly_comparison, create_plotly_heatmap
@@ -105,7 +105,7 @@ render_model_info_sidebar(model, f'Compression AE (Latent {selected_latent})')
 # Load dataset
 @st.cache_data
 def load_dataset():
-    (x_train, y_train), (x_test, y_test) = load_flowers(normalize=True)
+    (x_train, y_train), (x_test, y_test) = load_coco(subset_percent=10, normalize=True)
     return x_test, y_test
 
 x_test, y_test = load_dataset()
@@ -118,7 +118,7 @@ tab1, tab2 = st.tabs(['From dataset', 'Upload your own'])
 
 with tab1:
     selected_image, selected_label, selected_idx = render_sample_selector(
-        x_test, y_test, FLOWER_CLASSES, key='compression'
+        x_test, y_test, COCO_CLASSES, key='compression'
     )
     input_image = selected_image
 
