@@ -203,13 +203,14 @@ def upload_dataset(file_path, repo_path):
         bool: True if upload succeeded, False otherwise
     """
     if not HF_TOKEN:
-        # Silent skip - students don't need to upload
+        # Warn if token not found
+        print('Warning: HF_TOKEN not found. Skipping upload.\n')
         return False
     
     try:
         file_path = Path(file_path)
         if not file_path.exists():
-            print(f'Warning: Dataset file not found: {file_path}')
+            print(f'Warning: Dataset file not found: {file_path}\n')
             return False
         
         print(f'Uploading {file_path.name} to Hugging Face...')
@@ -223,9 +224,9 @@ def upload_dataset(file_path, repo_path):
             repo_type='model'
         )
         
-        print(f'Successfully uploaded to {HF_REPO_ID}/{repo_path}')
+        print(f'Successfully uploaded to {HF_REPO_ID}/{repo_path}\n')
         return True
         
     except Exception as e:
-        print(f'Warning: Upload failed: {e}')
+        print(f'Warning: Upload failed: {e}\n')
         return False
