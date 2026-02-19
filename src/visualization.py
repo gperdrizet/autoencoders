@@ -10,13 +10,12 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 
-def plot_image_grid(images, titles=None, rows=2, cols=5, figsize=(8, 3), cmap=None):
+def plot_image_grid(images, rows=2, cols=5, figsize=(6, 3), cmap=None):
     """
     Plot a grid of images using Matplotlib (for notebooks).
     
     Args:
         images: Array of images
-        titles: Optional list of titles
         rows: Number of rows
         cols: Number of columns
         figsize: Figure size
@@ -33,8 +32,6 @@ def plot_image_grid(images, titles=None, rows=2, cols=5, figsize=(8, 3), cmap=No
     for i in range(n_images):
         axes[i].imshow(images[i], cmap=cmap)
         axes[i].axis('off')
-        if titles is not None and i < len(titles):
-            axes[i].set_title(titles[i])
     
     # Hide unused subplots
     for i in range(n_images, rows * cols):

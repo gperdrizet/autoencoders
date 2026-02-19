@@ -157,13 +157,13 @@ def upload_model(model_path, repo_path=None):
     """
     if not HF_TOKEN:
         # Warn if token not found
-        print('HF_TOKEN not found. Skipping upload.')
+        print('Warning: HF_TOKEN not found. Skipping upload.\n')
         return False
     
     try:
         model_path = Path(model_path)
         if not model_path.exists():
-            print(f'Warning: Model file not found: {model_path}')
+            print(f'Warning: Model file not found: {model_path}\n')
             return False
         
         if repo_path is None:
@@ -180,11 +180,11 @@ def upload_model(model_path, repo_path=None):
             repo_type='model'
         )
         
-        print(f'Successfully uploaded to {HF_REPO_ID}/{repo_path}')
+        print(f'Successfully uploaded to {HF_REPO_ID}/{repo_path}\n')
         return True
         
     except Exception as e:
-        print(f'Warning: Upload failed: {e}')
+        print(f'Warning: Upload failed: {e}\n')
         return False
 
 

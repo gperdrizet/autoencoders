@@ -9,6 +9,7 @@ import io
 import numpy as np
 import tensorflow as tf
 import tensorflow_datasets as tfds
+from tensorflow import keras
 from PIL import Image
 
 
@@ -256,6 +257,59 @@ def _load_coco_from_tfds(subset_percent=10, normalize=True, image_size=IMAGE_SIZ
     y_test = np.array(y_test)
     
     return (x_train, y_train), (x_test, y_test)
+
+
+def create_augmentation_layer():
+    """
+    Create a data augmentation layer for training.
+    
+    Data augmentation improves generalization and reconstruction quality by
+    exposing the model to variations in the training data.
+    
+    Reference:
+    - Shorten & Khoshgoftaar "A survey on Image Data Augmentation for Deep Learning"
+      (Journal of Big Data 2019)
+    
+    Returns:
+        Sequential model with augmentation layers
+    """
+    return keras.Sequential([
+        keras.layers.RandomFlip('horizontal'),
+        keras.layers.RandomRotation(0.05),  # ±18 degrees
+        keras.layers.RandomBrightness(0.1),
+        keras.layers.RandomContrast(0.1),
+    ], name='augmentation')
+
+
+def augment_dataset(x_train, batch_size=128):
+    """
+    Create an augmented dataset generator using tf.data API.
+    
+    The augmentation is applied to the input, but the target remains the original
+    clean image. This helps the model learn robust features.
+    
+    Args:
+        x_train: Training images (numpy array)
+        batch_size: Batch size for training
+    
+    Returns:
+        tf.data.Dataset with (augmented_input, original_target) pairs
+    """
+    augmentation = create_augmentation_layer()
+    
+    # Create dataset from numpy array
+    dataset = tf.data.Dataset.from_tensor_slices(x_train)
+    dataset = dataset.shuffle(buffer_size=10000)
+    dataset = dataset.batch(batch_size)
+    
+    # Apply augmentation to input, keep original as target
+    dataset = dataset.map(
+        lambda x: (augmentation(x, training=True), x),
+        num_parallel_calls=tf.data.AUTOTUNE
+    )
+    dataset = dataset.prefetch(tf.data.AUTOTUNE)
+    
+    return dataset
 
 
 def create_anomaly_dataset(normal_classes=[0, 1, 2, 3], normalize=True):

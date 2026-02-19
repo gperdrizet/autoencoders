@@ -72,6 +72,129 @@ def build_compression_ae(latent_dim=128, input_shape=(64, 64, 3)):
     return autoencoder, encoder, decoder
 
 
+def build_compression_ae_v2(latent_dim=256, input_shape=(64, 64, 3)):
+    """
+    Enhanced compression autoencoder with skip connections and residual blocks.
+    
+    Architecture improvements:
+    - U-Net style skip connections for detail preservation
+    - Residual blocks for better gradient flow
+    - LeakyReLU activation for better feature learning
+    - Deeper architecture with more filters
+    
+    References:
+    - Skip Connections: Ronneberger et al. "U-Net: Convolutional Networks for
+      Biomedical Image Segmentation" (MICCAI 2015)
+    - Residual Blocks: He et al. "Deep Residual Learning for Image Recognition"
+      (CVPR 2016)
+    
+    Args:
+        latent_dim: Dimension of the latent space
+        input_shape: Shape of input images
+    
+    Returns:
+        Tuple of (autoencoder, encoder, decoder) models
+    """
+    
+    def residual_block(x, filters):
+        """Residual block with batch normalization."""
+        shortcut = x
+        
+        x = layers.Conv2D(filters, 3, padding='same')(x)
+        x = layers.BatchNormalization()(x)
+        x = layers.LeakyReLU(0.2)(x)
+        
+        x = layers.Conv2D(filters, 3, padding='same')(x)
+        x = layers.BatchNormalization()(x)
+        
+        # Match dimensions if needed
+        if shortcut.shape[-1] != filters:
+            shortcut = layers.Conv2D(filters, 1, padding='same')(shortcut)
+        
+        x = layers.Add()([x, shortcut])
+        x = layers.LeakyReLU(0.2)(x)
+        
+        return x
+    
+    # Encoder
+    encoder_input = layers.Input(shape=input_shape, name='encoder_input')
+    
+    # Store skip connections
+    skip_connections = []
+    
+    # Block 1: 64x64 -> 32x32
+    x = residual_block(encoder_input, 64)
+    x = residual_block(x, 64)
+    skip_connections.append(x)
+    x = layers.MaxPooling2D(2)(x)
+    
+    # Block 2: 32x32 -> 16x16
+    x = residual_block(x, 128)
+    x = residual_block(x, 128)
+    skip_connections.append(x)
+    x = layers.MaxPooling2D(2)(x)
+    
+    # Block 3: 16x16 -> 8x8
+    x = residual_block(x, 256)
+    x = residual_block(x, 256)
+    skip_connections.append(x)
+    x = layers.MaxPooling2D(2)(x)
+    
+    # Block 4: 8x8 -> 4x4
+    x = residual_block(x, 512)
+    x = residual_block(x, 512)
+    skip_connections.append(x)
+    x = layers.MaxPooling2D(2)(x)
+    
+    # Bottleneck: 4x4 -> latent_dim
+    x = layers.Flatten()(x)
+    latent = layers.Dense(latent_dim, name='latent')(x)
+    
+    encoder = keras.Model(encoder_input, latent, name='encoder')
+    
+    # Decoder
+    decoder_input = layers.Input(shape=(latent_dim,), name='decoder_input')
+    
+    # Reshape to 4x4x512
+    x = layers.Dense(4 * 4 * 512)(decoder_input)
+    x = layers.Reshape((4, 4, 512))(x)
+    
+    # Block 1: 4x4 -> 8x8 (with skip connection)
+    x = layers.UpSampling2D(2, interpolation='bilinear')(x)
+    x = layers.Concatenate()([x, skip_connections[3]])
+    x = residual_block(x, 512)
+    x = residual_block(x, 256)
+    
+    # Block 2: 8x8 -> 16x16 (with skip connection)
+    x = layers.UpSampling2D(2, interpolation='bilinear')(x)
+    x = layers.Concatenate()([x, skip_connections[2]])
+    x = residual_block(x, 256)
+    x = residual_block(x, 128)
+    
+    # Block 3: 16x16 -> 32x32 (with skip connection)
+    x = layers.UpSampling2D(2, interpolation='bilinear')(x)
+    x = layers.Concatenate()([x, skip_connections[1]])
+    x = residual_block(x, 128)
+    x = residual_block(x, 64)
+    
+    # Block 4: 32x32 -> 64x64 (with skip connection)
+    x = layers.UpSampling2D(2, interpolation='bilinear')(x)
+    x = layers.Concatenate()([x, skip_connections[0]])
+    x = residual_block(x, 64)
+    x = residual_block(x, 64)
+    
+    # Output layer
+    decoder_output = layers.Conv2D(3, 3, activation='sigmoid', padding='same', name='output')(x)
+    
+    decoder = keras.Model(decoder_input, decoder_output, name='decoder')
+    
+    # Full autoencoder
+    autoencoder_output = decoder(encoder(encoder_input))
+    autoencoder = keras.Model(encoder_input, autoencoder_output, name='autoencoder_v2')
+    
+    return autoencoder, encoder, decoder
+
+
 def build_anomaly_ae(latent_dim=128, input_shape=(64, 64, 3)):
     """
     Build a convolutional autoencoder for anomaly detection.
