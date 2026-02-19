@@ -13,7 +13,9 @@ import numpy as np
 import streamlit as st
 
 # Add src to path
-sys.path.append(str(Path(__file__).parent.parent))
+BASE_DIR = Path(__file__).parent.parent
+sys.path.append(str(BASE_DIR))
+MODELS_DIR = BASE_DIR / 'models'
 
 # Local imports
 from src.data_utils import COCO_CLASSES, load_coco, preprocess_image
@@ -34,7 +36,7 @@ from src.streamlit_components import (
 # Page config
 st.set_page_config(
     page_title='Compression Demo',
-    page_icon='⬛',
+    page_icon=':black_large_square:',
     layout='wide'
 )
 
@@ -86,16 +88,13 @@ size_reduction_pct = 100 * (1 - selected_latent / 12288)
 # Load model
 @st.cache_resource
 def load_compression_model(latent_dim):
-    from src.huggingface_utils import download_model
-    
     model_name = f'compression_ae_latent{latent_dim}.keras'
-    try:
-        model_path = download_model(model_name, models_dir='models')
-        return load_model(model_path)
-    except Exception as e:
-        st.error(f'Failed to load model: {e}')
-        st.info('Make sure the models are uploaded to Hugging Face or train them locally.')
+    model_path = MODELS_DIR / model_name
+    if not model_path.exists():
+        st.error(f'Model file not found: {model_name}')
+        st.info('Train the model locally or add it to the models directory.')
         st.stop()
+    return load_model(str(model_path))
 
 with show_loading_message(f'Loading compression model (latent {selected_latent})...'):
     model = load_compression_model(selected_latent)

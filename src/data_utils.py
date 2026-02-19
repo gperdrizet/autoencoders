@@ -35,14 +35,15 @@ COCO_CLASSES = [
 IMAGE_SIZE = 64
 
 
-def load_coco_cached(subset_percent=10, normalize=True, image_size=IMAGE_SIZE, cache_dir='../data'):
+def load_coco(subset_percent=10, normalize=True, image_size=IMAGE_SIZE, cache_dir='../data'):
     """
-    Load COCO dataset with caching for faster subsequent loads.
+    Load COCO dataset with intelligent caching.
     
     This function attempts to load the dataset in the following order:
-    1. Local cache (if exists)
-    2. Hugging Face Hub (pre-processed subset)
-    3. TensorFlow Datasets (full download)
+    1. Check local cache
+    2. Check HuggingFace for requested subset percentage
+    3. Download from TensorFlow Datasets and create subset
+    4. Save locally and upload to HuggingFace
     
     Args:
         subset_percent: Percentage of training data to use (1-100)
@@ -54,65 +55,52 @@ def load_coco_cached(subset_percent=10, normalize=True, image_size=IMAGE_SIZE, c
         Tuple of ((x_train, y_train), (x_test, y_test))
     """
     from pathlib import Path
+    from huggingface_hub import hf_hub_download
+    from src.huggingface_utils import HF_REPO_ID, HF_TOKEN
+    import shutil
     
     cache_path = Path(cache_dir)
     cache_path.mkdir(exist_ok=True)
     
     cache_file = cache_path / f'coco_{subset_percent}percent_subset.npz'
+    hf_filename = f'data/coco_{subset_percent}percent_subset.npz'
     
-    # Try loading from local cache first (silent - fast path)
+    # Check local cache first (fastest)
     if cache_file.exists():
+        print(f'Data source: Local cache ({subset_percent}% subset)')
         data = np.load(cache_file)
-        x_train = data['x_train']
-        y_train = data['y_train']
-        x_test = data['x_test']
-        y_test = data['y_test']
-        return (x_train, y_train), (x_test, y_test)
+        return (data['x_train'], data['y_train']), (data['x_test'], data['y_test'])
     
-    # Try downloading from Hugging Face Hub
+    # Try HuggingFace
     try:
-        from huggingface_hub import hf_hub_download
-        from src.huggingface_utils import HF_REPO_ID
-        
-        print(f'📥 Downloading COCO {subset_percent}% subset from HuggingFace...')
-        
-        # Download from HF Hub (has built-in progress bar)
         downloaded_path = hf_hub_download(
             repo_id=HF_REPO_ID,
-            filename=f'data/coco_{subset_percent}percent_subset.npz',
+            filename=hf_filename,
             repo_type='model',
             cache_dir=str(cache_path / '.hf_cache')
         )
         
-        # Load and cache locally
-        data = np.load(downloaded_path)
-        x_train = data['x_train']
-        y_train = data['y_train']
-        x_test = data['x_test']
-        y_test = data['y_test']
+        print(f'Data source: HuggingFace ({subset_percent}% subset)')
         
-        np.savez_compressed(
-            cache_file,
-            x_train=x_train,
-            y_train=y_train,
-            x_test=x_test,
-            y_test=y_test
-        )
+        # Copy to local cache for faster access next time
+        shutil.copy(downloaded_path, cache_file)
         
-        return (x_train, y_train), (x_test, y_test)
+        data = np.load(cache_file)
+        return (data['x_train'], data['y_train']), (data['x_test'], data['y_test'])
         
     except Exception:
-        # Fall back to TFDS
-        print('📥 Downloading COCO dataset from TensorFlow Datasets (~95GB)...')
+        pass  # File not on HuggingFace, continue to next option
     
-    # Fallback: Download from TFDS (has built-in progress bar)
-    (x_train, y_train), (x_test, y_test) = load_coco(
+    # Download from TensorFlow Datasets
+    print(f'Data source: TensorFlow Datasets (downloading {subset_percent}% subset)')
+    
+    (x_train, y_train), (x_test, y_test) = _load_coco_from_tfds(
         subset_percent=subset_percent,
         normalize=normalize,
         image_size=image_size
     )
     
-    # Save to cache
+    # Save to local cache
     np.savez_compressed(
         cache_file,
         x_train=x_train,
@@ -121,13 +109,15 @@ def load_coco_cached(subset_percent=10, normalize=True, image_size=IMAGE_SIZE, c
         y_test=y_test
     )
     
-    # Auto-upload to Hugging Face if token is available (instructor mode)
-    try:
-        from src.huggingface_utils import upload_dataset
-        upload_dataset(cache_file, f'data/coco_{subset_percent}percent_subset.npz')
-    except Exception:
-        # Silent skip if upload fails - students don't need this
-        pass
+    # Try to upload to HuggingFace
+    if HF_TOKEN:
+        try:
+            from src.huggingface_utils import upload_dataset
+            upload_dataset(cache_file, hf_filename)
+        except Exception as e:
+            print(f'Warning: Could not upload to HuggingFace: {e}')
+    else:
+        print('Warning: HF_TOKEN not set; skipping upload to HuggingFace')
     
     return (x_train, y_train), (x_test, y_test)
 
@@ -188,10 +178,11 @@ def load_flowers(normalize=True, image_size=IMAGE_SIZE):
     return (x_train, y_train), (x_test, y_test)
 
 
-def load_coco(subset_percent=10, normalize=True, image_size=IMAGE_SIZE):
+def _load_coco_from_tfds(subset_percent=10, normalize=True, image_size=IMAGE_SIZE):
     """
-    Load COCO 2017 dataset with a configurable subset.
+    Load COCO 2017 dataset directly from TensorFlow Datasets.
     
+    Internal function - use load_coco() instead for caching support.
     Downloads the dataset on first run and caches it locally.
     This is a large dataset (~25GB), so we use a subset by default.
     

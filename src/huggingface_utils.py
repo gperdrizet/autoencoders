@@ -25,7 +25,7 @@ except ImportError:
 # Hugging Face repository configuration
 # Default: Uses public pre-trained models from mrdbourke/autoencoders-demo
 # To upload your own models: set HF_REPO_ID and HF_TOKEN in .env file
-HF_REPO_ID = os.getenv('HF_REPO_ID', 'mrdbourke/autoencoders-demo')
+HF_REPO_ID = os.getenv('HF_REPO_ID', 'gperdrizet/autoencoders')
 HF_TOKEN = os.getenv('HF_TOKEN', None)
 
 # Model files available in the repository
@@ -70,7 +70,7 @@ def download_model(model_name, models_dir='models', use_cache=True):
     
     # Download from Hugging Face
     try:
-        print(f'📥 Downloading {model_name} from Hugging Face...')
+        print(f'Downloading {model_name} from Hugging Face...')
         
         downloaded_path = hf_hub_download(
             repo_id=HF_REPO_ID,
@@ -156,19 +156,20 @@ def upload_model(model_path, repo_path=None):
         bool: True if upload succeeded, False otherwise
     """
     if not HF_TOKEN:
-        # Silent skip - students don't need to upload
+        # Warn if token not found
+        print('HF_TOKEN not found. Skipping upload.')
         return False
     
     try:
         model_path = Path(model_path)
         if not model_path.exists():
-            print(f'⚠️  Model file not found: {model_path}')
+            print(f'Warning: Model file not found: {model_path}')
             return False
         
         if repo_path is None:
             repo_path = model_path.name
         
-        print(f'📤 Uploading {model_path.name} to Hugging Face...')
+        print(f'Uploading {model_path.name} to Hugging Face...')
         
         api = HfApi()
         api.upload_file(
@@ -179,11 +180,11 @@ def upload_model(model_path, repo_path=None):
             repo_type='model'
         )
         
-        print(f'✓ Successfully uploaded to {HF_REPO_ID}/{repo_path}')
+        print(f'Successfully uploaded to {HF_REPO_ID}/{repo_path}')
         return True
         
     except Exception as e:
-        print(f'⚠️  Upload failed: {e}')
+        print(f'Warning: Upload failed: {e}')
         return False
 
 
@@ -208,10 +209,10 @@ def upload_dataset(file_path, repo_path):
     try:
         file_path = Path(file_path)
         if not file_path.exists():
-            print(f'⚠️  Dataset file not found: {file_path}')
+            print(f'Warning: Dataset file not found: {file_path}')
             return False
         
-        print(f'📤 Uploading {file_path.name} to Hugging Face...')
+        print(f'Uploading {file_path.name} to Hugging Face...')
         
         api = HfApi()
         api.upload_file(
@@ -222,9 +223,9 @@ def upload_dataset(file_path, repo_path):
             repo_type='model'
         )
         
-        print(f'✓ Successfully uploaded to {HF_REPO_ID}/{repo_path}')
+        print(f'Successfully uploaded to {HF_REPO_ID}/{repo_path}')
         return True
         
     except Exception as e:
-        print(f'⚠️  Upload failed: {e}')
+        print(f'Warning: Upload failed: {e}')
         return False

@@ -22,7 +22,7 @@ from src.streamlit_components import render_header
 # Page configuration
 st.set_page_config(
     page_title='Autoencoder Demos',
-    page_icon='⬛',
+    page_icon=':black_large_square:',
     layout='wide',
     initial_sidebar_state='expanded'
 )

@@ -13,7 +13,9 @@ import numpy as np
 import streamlit as st
 
 # Add src to path
-sys.path.append(str(Path(__file__).parent.parent))
+BASE_DIR = Path(__file__).parent.parent
+sys.path.append(str(BASE_DIR))
+MODELS_DIR = BASE_DIR / 'models'
 
 # Local imports
 from src.data_utils import COCO_CLASSES, load_coco, preprocess_image
@@ -33,7 +35,7 @@ from src.streamlit_components import (
 # Page config
 st.set_page_config(
     page_title='Denoising Demo',
-    page_icon='⬛',
+    page_icon=':black_large_square:',
     layout='wide'
 )
 
@@ -90,16 +92,13 @@ noise_level = st.sidebar.slider(
 # Load model
 @st.cache_resource
 def load_denoising_model():
-    from src.huggingface_utils import download_model
-    
     model_name = 'denoising_ae.keras'
-    try:
-        model_path = download_model(model_name, models_dir='models')
-        return load_model(model_path)
-    except Exception as e:
-        st.error(f'Failed to load model: {e}')
-        st.info('Make sure the model is uploaded to Hugging Face or train it locally.')
+    model_path = MODELS_DIR / model_name
+    if not model_path.exists():
+        st.error(f'Model file not found: {model_name}')
+        st.info('Train the model locally or add it to the models directory.')
         st.stop()
+    return load_model(str(model_path))
 
 with show_loading_message('Loading denoising model...'):
     model = load_denoising_model()
@@ -110,7 +109,7 @@ render_model_info_sidebar(model, 'Denoising AE')
 # Load dataset
 @st.cache_data
 def load_dataset():
-    (x_train, y_train), (x_test, y_test) = load_coco(subset_percent=10, normalize=True)
+    (x_train, y_train), (x_test, y_test) = load_coco(subset_percent=20, normalize=True)
     return x_test, y_test
 
 x_test, y_test = load_dataset()

@@ -13,7 +13,9 @@ import numpy as np
 import streamlit as st
 
 # Add src to path
-sys.path.append(str(Path(__file__).parent.parent))
+BASE_DIR = Path(__file__).parent.parent
+sys.path.append(str(BASE_DIR))
+MODELS_DIR = BASE_DIR / 'models'
 
 # Local imports
 from src.data_utils import FLOWER_CLASSES, COCO_CLASSES, load_flowers, load_coco
@@ -36,7 +38,7 @@ from src.streamlit_components import (
 # Page config
 st.set_page_config(
     page_title='Anomaly Detection',
-    page_icon='⬛',
+    page_icon=':black_large_square:',
     layout='wide'
 )
 
@@ -84,16 +86,13 @@ st.markdown('---')
 # Load model
 @st.cache_resource
 def load_anomaly_model():
-    from src.huggingface_utils import download_model
-    
     model_name = 'anomaly_ae.keras'
-    try:
-        model_path = download_model(model_name, models_dir='models')
-        return load_model(model_path)
-    except Exception as e:
-        st.error(f'Failed to load model: {e}')
-        st.info('Make sure the model is uploaded to Hugging Face or train it locally.')
+    model_path = MODELS_DIR / model_name
+    if not model_path.exists():
+        st.error(f'Model file not found: {model_name}')
+        st.info('Train the model locally or add it to the models directory.')
         st.stop()
+    return load_model(str(model_path))
 
 with show_loading_message('Loading anomaly detection model...'):
     model = load_anomaly_model()
@@ -214,7 +213,7 @@ with tab1:
     )
     st.plotly_chart(fig_roc, use_container_width=True)
     
-    st.info(f'AUC = {roc_metrics['auc']:.4f}: ' + 
+    st.info(f'AUC = {roc_metrics["auc"]:.4f}: ' + 
             ('Excellent performance! ' if roc_metrics['auc'] > 0.95 else
              'Very good performance! ' if roc_metrics['auc'] > 0.9 else
              'Good performance. ' if roc_metrics['auc'] > 0.8 else
