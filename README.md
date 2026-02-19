@@ -7,21 +7,15 @@ Interactive demonstrations of autoencoder applications for AI/ML bootcamp studen
 This repository contains three comprehensive demonstrations showing the power and versatility of autoencoders:
 
 1. **Image compression** - Compress COCO images while maintaining quality
-2. **Anomaly detection** - Identify unusual patterns using reconstruction error (Flowers vs COCO)
-3. **Image denoising** - Remove noise from corrupted images
+2. **Image denoising** - Remove noise from corrupted images
+3. **Anomaly detection** - Identify unusual patterns using reconstruction error (Flowers vs COCO)
 
 Each demo includes:
 - **Training notebooks** - Step-by-step training with detailed explanations
 - **Interactive web app** - Streamlit-based demo for hands-on exploration
-- **Quality metrics** - PSNR, SSIM, ROC-AUC, and more
 - **Pre-trained models** - Ready-to-use models automatically downloaded from HuggingFace
 
 ## Quick start
-
-### Prerequisites
-
-- Python 3.8+
-- (Optional) NVIDIA GPU with CUDA for faster training
 
 ### Installation
 
@@ -43,7 +37,7 @@ Each demo includes:
    pip install -r requirements-cloud.txt
    ```
 
-3. **Configure environment (optional)**
+3. **Configure environment**
    
    Pre-trained models and datasets are hosted on HuggingFace and will download automatically.
    
@@ -89,7 +83,7 @@ Navigate to:
 
 **Tip:** Set `TRAIN_MODEL = False` at the top of each notebook to use pre-trained models without training.
 
-## ## Project structure
+## Project structure
 
 ```
 autoencoders/
@@ -127,72 +121,12 @@ autoencoders/
 └── README.md                      # This file
 ```
 
-## Demos
-
-### 1. Image compression
-
-**What it does:**
-- Compresses 32x32 RGB images into smaller latent representations
-- Reconstructs images from compressed form
-- Compares quality across different compression ratios
-
-**Key Features:**
-- Multiple compression levels (32, 64, 128, 256 latent dimensions)
-- Quality metrics (MSE, PSNR, SSIM)
-- Upload your own images
-- Side-by-side comparison
-- Difference heatmaps
-
-**Compression Ratios:**
-- Latent 32: ~96x compression
-- Latent 64: ~48x compression
-- Latent 128: ~24x compression
-- Latent 256: ~12x compression
-
-### 2. Anomaly detection
-
-**What it does:**
-- Detects unusual/anomalous patterns in images
-- Uses reconstruction error as anomaly score
-- Trained on 4 flower classes, detects roses as anomalies
-
-**Key Features:**
-- Adjustable detection threshold
-- ROC curve analysis
-- Confusion matrix
-- Top anomalies visualization
-- Error distribution histograms
-- Per-image error heatmaps
-
-**Performance:**
-- Achieves ROC-AUC > 0.9
-- Configurable precision/recall trade-off
-- Real-time threshold adjustment
-
-### 3. VAE generation
-
-**What it does:**
-- Generates brand new, synthetic images
-- Explores smooth probabilistic latent space
-- Performs latent space arithmetic
-
-**Key Features:**
-- Random image generation
-- Manual latent space navigation (sliders)
-- Smooth interpolation between images
-- Latent arithmetic (A + B - C)
-- Temperature-controlled sampling
-
-**What's Special:**
-- Variational approach with KL divergence
-- Reparameterization trick for gradients
-- Continuous, structured latent space
 
 ## Training the models
 
-**Note:** Pre-trained models are available on [Hugging Face Hub](https://huggingface.co/your-username/autoencoders-demo) and will download automatically when you run the app. You only need to train models if you want to experiment with different architectures or hyperparameters.
+**Note:** Pre-trained models are available on [Hugging Face Hub](https://huggingface.co/gperdrizet/autoencoders) and will download automatically when you run the app. You only need to train models if you want to experiment with different architectures or hyperparameters.
 
-### Step 1: Compression Autoencoders
+### Compression
 
 Run `notebooks/01-compression.ipynb` to train models with different latent dimensions:
 
@@ -203,9 +137,9 @@ Run `notebooks/01-compression.ipynb` to train models with different latent dimen
 
 **Training Time:** ~30-60 minutes on GPU, ~2-4 hours on CPU
 
-### Step 2: Anomaly Detection
+### Anomaly detection
 
-Run `notebooks/02-anomaly_detection.ipynb` to train the anomaly detector:
+Run `notebooks/03-anomaly_detection.ipynb` to train the anomaly detector:
 
 - Trains on 4 flower classes (dandelion, daisy, tulips, sunflowers)
 - Uses roses as anomalies
@@ -215,40 +149,6 @@ Run `notebooks/02-anomaly_detection.ipynb` to train the anomaly detector:
 
 **Training Time:** ~20-40 minutes on GPU, ~1-2 hours on CPU
 
-### Step 3: Variational Autoencoder
-
-Run `notebooks/03-generation.ipynb` to train the VAE:
-
-- Trains on all flower classes
-- ~100 epochs (VAEs need more training)
-- Saves to `models/vae.keras`
-- Includes interpolation and latent space visualization
-
-**Training Time:** ~60-90 minutes on GPU, ~4-6 hours on CPU
-
-### Uploading Models to Hugging Face
-
-After training your models, you can upload them to Hugging Face:
-
-1. **Create a Hugging Face account**
-   - Sign up at [huggingface.co](https://huggingface.co)
-   - Create a new model repository
-
-2. **Login via CLI**
-   ```bash
-   pip install huggingface-hub
-   huggingface-cli login
-   ```
-
-3. **Upload your models**
-   ```bash
-   python upload_models.py --repo-id your-username/autoencoders-demo
-   ```
-
-4. **Update configuration**
-   - Edit `src/huggingface_utils.py`
-   - Set `HF_REPO_ID = "your-username/autoencoders-demo"`
-   - Commit and push changes
 
 ## Using the Streamlit app
 
@@ -260,7 +160,7 @@ streamlit run app.py
 
 The app will open at `http://localhost:8501`
 
-### Cloud Deployment (Streamlit Community Cloud)
+### Cloud deployment (Streamlit Community Cloud)
 
 1. **Push to GitHub**
    ```bash
@@ -312,66 +212,7 @@ Latent Vector
 Output (32x32x3)
 ```
 
-**VAE Differences:**
-- Encoder outputs `z_mean` and `z_log_var`
-- Sampling layer with reparameterization trick
-- Loss = Reconstruction + beta*KL Divergence (beta=0.0005)
-
-### Training Configuration
-
-- **Optimizer:** Adam (lr=0.001)
-- **Loss:** MSE (compression/anomaly), MSE+KL (VAE)
-- **Batch Size:** 128
-- **Callbacks:** EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
-
-## ## Development
-
-### Running Tests
-
-```bash
-# TODO: Add tests
-pytest tests/
-```
-
-### Code Style
-
-The codebase follows:
-- PEP 8 style guidelines
-- Type hints for function parameters
-- Comprehensive docstrings
-- Modular, reusable components
-
-### Project Philosophy
-
-- **Educational Focus:** Clear explanations and visualizations
-- **Modularity:** Shared utilities for both notebooks and Streamlit
-- **Reproducibility:** Fixed random seeds, saved models
-- **Deployment-Ready:** Optimized for both local and cloud
-
-## ## Learning resources
-
-### Key Concepts
-
-- **Autoencoders:** Neural networks that learn compressed representations
-- **Latent Space:** The compressed representation (bottleneck)
-- **Reconstruction Error:** Difference between input and output
-- **Variational Autoencoders:** Probabilistic generative models
-- **KL Divergence:** Regularization term for VAEs
-
-### Further Reading
-
-**Autoencoders & VAEs:**
-- [Original VAE Paper](https://arxiv.org/abs/1312.6114) - Kingma & Welling, 2013
-- [β-VAE](https://openreview.net/forum?id=Sy2fzU9gl) - Higgins et al., 2017
-- [Understanding VAEs](https://arxiv.org/abs/1606.05908) - Doersch, 2016
-- [Anomaly Detection Survey](https://arxiv.org/abs/2007.02500)
-
-**Hugging Face Resources:**
-- [Hugging Face Hub Documentation](https://huggingface.co/docs/hub)
-- [Model Hosting Guide](https://huggingface.co/docs/hub/models)
-- [Getting Started with Hub](https://huggingface.co/docs/huggingface_hub/quick-start)
-
-## ## Contributing
+## Contributing
 
 This is an educational project for bootcamp students. Contributions are welcome!
 
@@ -380,25 +221,6 @@ This is an educational project for bootcamp students. Contributions are welcome!
 3. Make your changes
 4. Submit a pull request
 
-## ## License
+## License
 
 MIT License - see LICENSE file for details
-
-## ## Acknowledgments
-
-- TF Flowers dataset from TensorFlow Datasets
-- CIFAR-10 dataset (original base for this repo): [Learning Multiple Layers of Features from Tiny Images](https://www.cs.toronto.edu/~kriz/learning-features-2009-TR.pdf)
-- TensorFlow/Keras team
-- Streamlit team
-- AI/ML Bootcamp students and instructors
-
-## ## Support
-
-For questions or issues:
-- Open an issue on GitHub
-- Contact the bootcamp instructors
-- Check the documentation in notebooks and code comments
-
----
-
-**Built for AI/ML bootcamp students**

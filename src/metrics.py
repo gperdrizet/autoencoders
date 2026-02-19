@@ -5,7 +5,6 @@ Metrics and evaluation utilities for autoencoders.
 # Third-party imports
 import numpy as np
 import tensorflow as tf
-from skimage.metrics import structural_similarity as ssim
 from sklearn.metrics import auc, roc_auc_score, roc_curve
 
 
@@ -21,61 +20,6 @@ def calculate_mse(original, reconstructed):
         MSE value(s)
     """
     return np.mean((original - reconstructed) ** 2, axis=(1, 2, 3))
-
-
-def calculate_ssim(original, reconstructed):
-    """
-    Calculate Structural Similarity Index (SSIM) between images.
-    
-    Args:
-        original: Original images (batch or single)
-        reconstructed: Reconstructed images
-    
-    Returns:
-        SSIM value(s)
-    """
-    # Handle batch or single image
-    if len(original.shape) == 4:
-        # Batch of images
-        ssim_values = []
-        for i in range(len(original)):
-            ssim_val = ssim(
-                original[i],
-                reconstructed[i],
-                multichannel=True,
-                channel_axis=2,
-                data_range=1.0
-            )
-            ssim_values.append(ssim_val)
-        return np.array(ssim_values)
-    else:
-        # Single image
-        return ssim(
-            original,
-            reconstructed,
-            multichannel=True,
-            channel_axis=2,
-            data_range=1.0
-        )
-
-
-def calculate_psnr(original, reconstructed, max_pixel=1.0):
-    """
-    Calculate Peak Signal-to-Noise Ratio (PSNR).
-    
-    Args:
-        original: Original images
-        reconstructed: Reconstructed images
-        max_pixel: Maximum pixel value (default: 1.0 for normalized images)
-    
-    Returns:
-        PSNR value(s) in dB
-    """
-    mse = calculate_mse(original, reconstructed)
-    # Avoid division by zero
-    mse = np.maximum(mse, 1e-10)
-    psnr = 20 * np.log10(max_pixel / np.sqrt(mse))
-    return psnr
 
 
 def calculate_reconstruction_error(model, images):
@@ -194,13 +138,9 @@ def compute_metrics_summary(original, reconstructed, latent_dim):
         Dictionary of metrics
     """
     mse = np.mean(calculate_mse(original, reconstructed))
-    psnr = np.mean(calculate_psnr(original, reconstructed))
-    ssim_value = np.mean(calculate_ssim(original, reconstructed))
     compression_ratio = calculate_compression_ratio(original.shape[1:], latent_dim)
     
     return {
         'mse': float(mse),
-        'psnr': float(psnr),
-        'ssim': float(ssim_value),
         'compression_ratio': float(compression_ratio)
     }

@@ -63,9 +63,8 @@ render_explanation_expander(
     **Trade-off**: Higher compression = more information loss = lower quality
     
     **Quality Metrics**:
-    - **MSE** (Mean Squared Error): Lower is better
-    - **PSNR** (Peak Signal-to-Noise Ratio): Higher is better (>30 dB is good)
-    - **SSIM** (Structural Similarity): Higher is better (0-1 scale, >0.9 is excellent)
+    - **MSE** (Mean Squared Error): Lower means the reconstruction matches the original
+    - **Compression Ratio**: Higher ratios save more space but typically increase error
     """
 )
 
@@ -81,6 +80,8 @@ selected_latent = st.sidebar.selectbox(
     index=2,  # Default to 128
     format_func=lambda x: f'Latent {x} ({12288/x:.1f}x compression)'
 )
+
+size_reduction_pct = 100 * (1 - selected_latent / 12288)
 
 # Load model
 @st.cache_resource
@@ -155,9 +156,8 @@ if input_image is not None:
     render_metrics_display({
         'Compression Ratio': f'{metrics["compression_ratio"]:.1f}x',
         'MSE': f'{metrics["mse"]:.6f}',
-        'PSNR': f'{metrics["psnr"]:.2f} dB',
-        'SSIM': f'{metrics["ssim"]:.4f}'
-    }, columns=4)
+        'Size Reduction': f'{size_reduction_pct:.1f}%'
+    }, columns=3)
     
     st.markdown('---')
     
@@ -206,12 +206,11 @@ if input_image is not None:
         **Compression Details:**
         - Original size: 12,288 values (64 x 64 x 3)
         - Latent size: {selected_latent} values
-        - Size reduction: {100 * (1 - selected_latent/12288):.1f}%
+        - Size reduction: {size_reduction_pct:.1f}%
         
         **Quality Assessment:**
+        - Compression ratio of {metrics['compression_ratio']:.1f}x keeps only {100/metrics['compression_ratio']:.1f}% of the original values
         - MSE of {metrics['mse']:.6f} indicates {'low' if metrics['mse'] < 0.01 else 'moderate' if metrics['mse'] < 0.02 else 'high'} reconstruction error
-        - PSNR of {metrics['psnr']:.2f} dB is {'excellent' if metrics['psnr'] > 30 else 'good' if metrics['psnr'] > 25 else 'moderate'}
-        - SSIM of {metrics['ssim']:.4f} shows {'excellent' if metrics['ssim'] > 0.9 else 'good' if metrics['ssim'] > 0.8 else 'moderate'} structural similarity
         
         **Trade-offs:**
         - Lower latent dimensions = higher compression but lower quality
@@ -235,7 +234,7 @@ if st.button('Generate Comparison Across All Latent Dimensions'):
             st.image(input_image if len(input_image.shape) == 3 else input_batch[0], 
                     caption='Original', use_container_width=True)
             st.metric('Latent Dim', 'N/A')
-            st.metric('PSNR', '∞ dB')
+            st.metric('MSE', '0.0000')
         
         # Each latent dimension
         for idx, latent_dim in enumerate(latent_dims, start=1):
@@ -248,8 +247,7 @@ if st.button('Generate Comparison Across All Latent Dimensions'):
                 st.image(reconstructed_comp, 
                         caption=f'Latent {latent_dim}', use_container_width=True)
                 st.metric('Compression', f'{metrics_comp["compression_ratio"]:.1f}x')
-                st.metric('PSNR', f'{metrics_comp["psnr"]:.1f} dB')
-                st.metric('SSIM', f'{metrics_comp["ssim"]:.3f}')
+                st.metric('MSE', f'{metrics_comp["mse"]:.4f}')
     else:
         st.warning('Please select or upload an image first!')
 
@@ -280,14 +278,9 @@ with st.expander('Tips for best results'):
         - Best for detailed or important images
     
     **Understanding the Metrics:**
-    
-    - **PSNR > 30 dB**: Excellent quality, minimal visible artifacts
-    - **PSNR 25-30 dB**: Good quality, some artifacts may be visible
-    - **PSNR < 25 dB**: Noticeable quality degradation
-    
-    - **SSIM > 0.9**: Structural similarity is very high
-    - **SSIM 0.8-0.9**: Good structural preservation
-    - **SSIM < 0.8**: Noticeable structural differences
+
+    - **Compression Ratio**: Higher ratios save more space but tend to introduce blur/artifacts. Anything above ~200x is extremely lossy.
+    - **MSE < 0.010**: High fidelity reconstruction with minor differences. 0.01-0.02 is acceptable for many use cases, while >0.02 indicates visible degradation.
     """)
 
 # Sidebar additional info

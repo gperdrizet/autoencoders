@@ -67,7 +67,7 @@ with col1:
     
     **Key Features:**
     - Compare different compression ratios
-    - Measure quality metrics (PSNR, SSIM)
+    - Track reconstruction error (MSE & compression ratio)
     - Upload your own images
     - Visualize compression artifacts
     

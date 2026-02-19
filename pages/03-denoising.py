@@ -17,7 +17,6 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 # Local imports
 from src.data_utils import COCO_CLASSES, load_coco, preprocess_image
-from src.metrics import compute_metrics_summary
 from src.model_utils import load_model
 from src.visualization import create_plotly_comparison, create_plotly_heatmap
 from src.streamlit_components import (
@@ -60,9 +59,8 @@ render_explanation_expander(
     - **Speckle**: Multiplicative noise (radar/ultrasound images)
     
     **Quality Metrics**:
-    - **PSNR** (Peak Signal-to-Noise Ratio): Higher is better (>30 dB is good)
-    - **SSIM** (Structural Similarity): Higher is better (0-1 scale, >0.9 is excellent)
-    - Higher values indicate better noise removal
+    - **MSE** (Mean Squared Error): Lower indicates the denoised image matches the clean target
+    - **Error Reduction**: Percent drop in MSE relative to the noisy input
     
     **Applications**:
     - Photo restoration
@@ -211,12 +209,9 @@ if input_image is not None:
         st.image(denoised, caption='Denoised', use_container_width=True)
     
     # Calculate metrics - compare denoised vs original
-    from src.metrics import calculate_psnr, calculate_ssim
-    
-    psnr_noisy = calculate_psnr(clean_image, noisy_image)
-    ssim_noisy = calculate_ssim(clean_image, noisy_image)
-    psnr_denoised = calculate_psnr(clean_image, denoised)
-    ssim_denoised = calculate_ssim(clean_image, denoised)
+    mse_noisy = float(np.mean((clean_image - noisy_image) ** 2))
+    mse_denoised = float(np.mean((clean_image - denoised) ** 2))
+    improvement_pct = ((mse_noisy - mse_denoised) / mse_noisy * 100) if mse_noisy > 0 else 0.0
     
     # Display metrics
     st.markdown('### Quality metrics')
@@ -226,31 +221,27 @@ if input_image is not None:
     with col1:
         st.markdown('**Noisy Image**')
         render_metrics_display({
-            'PSNR': f'{psnr_noisy:.2f} dB',
-            'SSIM': f'{ssim_noisy:.4f}'
+            'MSE vs Clean': f'{mse_noisy:.6f}',
+            'Error Reduction': '0.0%'
         }, columns=2)
     
     with col2:
         st.markdown('**Denoised Image**')
         render_metrics_display({
-            'PSNR': f'{psnr_denoised:.2f} dB',
-            'SSIM': f'{ssim_denoised:.4f}'
+            'MSE vs Clean': f'{mse_denoised:.6f}',
+            'Error Reduction': f'{improvement_pct:+.1f}%'
         }, columns=2)
     
     # Show improvement
-    psnr_improvement = psnr_denoised - psnr_noisy
-    ssim_improvement = ssim_denoised - ssim_noisy
-    
     st.markdown('### Improvement')
     render_metrics_display({
-        'PSNR Improvement': f'+{psnr_improvement:.2f} dB' if psnr_improvement > 0 else f'{psnr_improvement:.2f} dB',
-        'SSIM Improvement': f'+{ssim_improvement:.4f}' if ssim_improvement > 0 else f'{ssim_improvement:.4f}'
-    }, columns=2)
+        'MSE Reduction': f'{improvement_pct:+.1f}%'
+    }, columns=1)
     
-    if psnr_improvement > 0 and ssim_improvement > 0:
-        st.success('Denoising improved image quality!')
-    elif psnr_improvement > 0 or ssim_improvement > 0:
-        st.info('Denoising partially improved image quality.')
+    if improvement_pct > 5:
+        st.success('Denoising significantly reduced reconstruction error!')
+    elif improvement_pct > 0:
+        st.info('Denoising produced a modest improvement.')
     else:
         st.warning('The model struggled with this noise level/type.')
     
@@ -316,13 +307,13 @@ if input_image is not None:
         st.markdown(f"""
         **Denoising Performance:**
         - Original image quality: Clean reference
-        - Noisy image quality: PSNR = {psnr_noisy:.2f} dB, SSIM = {ssim_noisy:.4f}
-        - Denoised quality: PSNR = {psnr_denoised:.2f} dB, SSIM = {ssim_denoised:.4f}
-        - Quality improvement: {'+' if psnr_improvement > 0 else ''}{psnr_improvement:.2f} dB PSNR
+        - Noisy image quality: MSE vs clean = {mse_noisy:.6f}
+        - Denoised quality: MSE vs clean = {mse_denoised:.6f}
+        - Error reduction: {improvement_pct:+.1f}%
         
         **Interpretation:**
-        - PSNR improvement of {psnr_improvement:.2f} dB indicates {'significant' if abs(psnr_improvement) > 5 else 'moderate' if abs(psnr_improvement) > 2 else 'slight'} quality change
-        - SSIM improvement of {ssim_improvement:.4f} shows {'excellent' if ssim_improvement > 0.1 else 'good' if ssim_improvement > 0.05 else 'moderate'} structural restoration
+        - Error reductions above 10% are clearly visible; 2-10% is subtle; <2% often imperceptible
+        - Residual error depends on the chosen noise type and strength
         
         **Notes:**
         - The model was trained on Gaussian noise with factor 0.25
@@ -358,13 +349,11 @@ if st.button('Generate Comparison Across All Noise Types'):
             
             with show_loading_message(f'Denoising {ntype}...'):
                 denoised = model.predict(np.expand_dims(noisy, axis=0), verbose=0)[0]
-                psnr = calculate_psnr(clean_image, denoised)
-                ssim = calculate_ssim(clean_image, denoised)
+                mse_val = float(np.mean((clean_image - denoised) ** 2))
             
             with cols[idx]:
                 st.image(denoised, caption=f'{ntype}', use_container_width=True)
-                st.metric('PSNR', f'{psnr:.1f} dB')
-                st.metric('SSIM', f'{ssim:.3f}')
+                st.metric('MSE', f'{mse_val:.4f}')
     else:
         st.warning('Please select or upload an image first!')
 
