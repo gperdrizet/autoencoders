@@ -116,10 +116,10 @@ def build_compression_ae_v2(latent_dim=256, input_shape=(64, 64, 3)):
         
         return x
     
-    # Encoder
+    # Build full autoencoder as single functional model (for skip connections)
     encoder_input = layers.Input(shape=input_shape, name='encoder_input')
     
-    # Store skip connections
+    # Encoder with skip connections
     skip_connections = []
     
     # Block 1: 64x64 -> 32x32
@@ -150,13 +150,9 @@ def build_compression_ae_v2(latent_dim=256, input_shape=(64, 64, 3)):
     x = layers.Flatten()(x)
     latent = layers.Dense(latent_dim, name='latent')(x)
     
-    encoder = keras.Model(encoder_input, latent, name='encoder')
-    
-    # Decoder
-    decoder_input = layers.Input(shape=(latent_dim,), name='decoder_input')
-    
+    # Decoder with skip connections
     # Reshape to 4x4x512
-    x = layers.Dense(4 * 4 * 512)(decoder_input)
+    x = layers.Dense(4 * 4 * 512)(latent)
     x = layers.Reshape((4, 4, 512))(x)
     
     # Block 1: 4x4 -> 8x8 (with skip connection)
@@ -186,11 +182,36 @@ def build_compression_ae_v2(latent_dim=256, input_shape=(64, 64, 3)):
     # Output layer
     decoder_output = layers.Conv2D(3, 3, activation='sigmoid', padding='same', name='output')(x)
     
-    decoder = keras.Model(decoder_input, decoder_output, name='decoder')
-    
     # Full autoencoder
-    autoencoder_output = decoder(encoder(encoder_input))
-    autoencoder = keras.Model(encoder_input, autoencoder_output, name='autoencoder_v2')
+    autoencoder = keras.Model(encoder_input, decoder_output, name='autoencoder_v2')
+    
+    # Create separate encoder model (for inference/analysis)
+    encoder = keras.Model(encoder_input, latent, name='encoder')
+    
+    # Create separate decoder model (without skip connections, for inference)
+    decoder_input = layers.Input(shape=(latent_dim,), name='decoder_input')
+    x_dec = layers.Dense(4 * 4 * 512)(decoder_input)
+    x_dec = layers.Reshape((4, 4, 512))(x_dec)
+    
+    # Decoder blocks without skip connections (for standalone decoder)
+    x_dec = layers.UpSampling2D(2, interpolation='bilinear')(x_dec)
+    x_dec = residual_block(x_dec, 512)
+    x_dec = residual_block(x_dec, 256)
+    
+    x_dec = layers.UpSampling2D(2, interpolation='bilinear')(x_dec)
+    x_dec = residual_block(x_dec, 256)
+    x_dec = residual_block(x_dec, 128)
+    
+    x_dec = layers.UpSampling2D(2, interpolation='bilinear')(x_dec)
+    x_dec = residual_block(x_dec, 128)
+    x_dec = residual_block(x_dec, 64)
+    
+    x_dec = layers.UpSampling2D(2, interpolation='bilinear')(x_dec)
+    x_dec = residual_block(x_dec, 64)
+    x_dec = residual_block(x_dec, 64)
+    
+    decoder_output_standalone = layers.Conv2D(3, 3, activation='sigmoid', padding='same', name='output')(x_dec)
+    decoder = keras.Model(decoder_input, decoder_output_standalone, name='decoder')
     
     return autoencoder, encoder, decoder
 
