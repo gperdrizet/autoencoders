@@ -100,16 +100,25 @@ def build_compression_ae_v2(latent_dim=256, input_shape=(64, 64, 3)):
         """Residual block with batch normalization."""
         shortcut = x
         
-        x = layers.Conv2D(filters, 3, padding='same')(x)
-        x = layers.BatchNormalization()(x)
+        x = layers.Conv2D(
+            filters, 3, padding='same',
+            kernel_initializer='he_normal'  # He initialization for better gradient flow
+        )(x)
+        x = layers.BatchNormalization(momentum=0.9)(x)  # Faster adaptation
         x = layers.LeakyReLU(0.2)(x)
         
-        x = layers.Conv2D(filters, 3, padding='same')(x)
-        x = layers.BatchNormalization()(x)
+        x = layers.Conv2D(
+            filters, 3, padding='same',
+            kernel_initializer='he_normal'
+        )(x)
+        x = layers.BatchNormalization(momentum=0.9)(x)
         
         # Match dimensions if needed
         if shortcut.shape[-1] != filters:
-            shortcut = layers.Conv2D(filters, 1, padding='same')(shortcut)
+            shortcut = layers.Conv2D(
+                filters, 1, padding='same',
+                kernel_initializer='he_normal'
+            )(shortcut)
         
         x = layers.Add()([x, shortcut])
         x = layers.LeakyReLU(0.2)(x)
@@ -148,11 +157,18 @@ def build_compression_ae_v2(latent_dim=256, input_shape=(64, 64, 3)):
     
     # Bottleneck: 4x4 -> latent_dim
     x = layers.Flatten()(x)
-    latent = layers.Dense(latent_dim, name='latent')(x)
+    latent = layers.Dense(
+        latent_dim,
+        kernel_initializer='he_normal',
+        name='latent'
+    )(x)
     
     # Decoder with skip connections
     # Reshape to 4x4x512
-    x = layers.Dense(4 * 4 * 512)(latent)
+    x = layers.Dense(
+        4 * 4 * 512,
+        kernel_initializer='he_normal'
+    )(latent)
     x = layers.Reshape((4, 4, 512))(x)
     
     # Block 1: 4x4 -> 8x8 (with skip connection)
@@ -180,7 +196,13 @@ def build_compression_ae_v2(latent_dim=256, input_shape=(64, 64, 3)):
     x = residual_block(x, 64)
     
     # Output layer
-    decoder_output = layers.Conv2D(3, 3, activation='sigmoid', padding='same', name='output')(x)
+    decoder_output = layers.Conv2D(
+        3, 3,
+        activation='sigmoid',
+        padding='same',
+        kernel_initializer='glorot_uniform',  # Xavier for sigmoid output
+        name='output'
+    )(x)
     
     # Full autoencoder
     autoencoder = keras.Model(encoder_input, decoder_output, name='autoencoder_v2')
@@ -190,7 +212,10 @@ def build_compression_ae_v2(latent_dim=256, input_shape=(64, 64, 3)):
     
     # Create separate decoder model (without skip connections, for inference)
     decoder_input = layers.Input(shape=(latent_dim,), name='decoder_input')
-    x_dec = layers.Dense(4 * 4 * 512)(decoder_input)
+    x_dec = layers.Dense(
+        4 * 4 * 512,
+        kernel_initializer='he_normal'
+    )(decoder_input)
     x_dec = layers.Reshape((4, 4, 512))(x_dec)
     
     # Decoder blocks without skip connections (for standalone decoder)
@@ -210,7 +235,190 @@ def build_compression_ae_v2(latent_dim=256, input_shape=(64, 64, 3)):
     x_dec = residual_block(x_dec, 64)
     x_dec = residual_block(x_dec, 64)
     
-    decoder_output_standalone = layers.Conv2D(3, 3, activation='sigmoid', padding='same', name='output')(x_dec)
+    decoder_output_standalone = layers.Conv2D(
+        3, 3,
+        activation='sigmoid',
+        padding='same',
+        kernel_initializer='glorot_uniform',
+        name='output'
+    )(x_dec)
+    decoder = keras.Model(decoder_input, decoder_output_standalone, name='decoder')
+    
+    return autoencoder, encoder, decoder
+
+
+def build_denoising_ae(latent_dim=128, input_shape=(64, 64, 3)):
+    """
+    Enhanced denoising autoencoder with skip connections and residual blocks.
+    
+    Architecture improvements:
+    - U-Net style skip connections for detail preservation
+    - Residual blocks for better gradient flow
+    - LeakyReLU activation for better feature learning
+    - He initialization for improved weight scaling
+    
+    The denoising autoencoder is trained with noisy inputs and clean targets,
+    forcing it to learn noise-resistant features.
+    
+    References:
+    - Skip Connections: Ronneberger et al. "U-Net: Convolutional Networks for
+      Biomedical Image Segmentation" (MICCAI 2015)
+    - Residual Blocks: He et al. "Deep Residual Learning for Image Recognition"
+      (CVPR 2016)
+    
+    Args:
+        latent_dim: Dimension of the latent space
+        input_shape: Shape of input images
+    
+    Returns:
+        Tuple of (autoencoder, encoder, decoder) models
+    """
+    
+    def residual_block(x, filters):
+        """Residual block with batch normalization."""
+        shortcut = x
+        
+        x = layers.Conv2D(
+            filters, 3, padding='same',
+            kernel_initializer='he_normal'
+        )(x)
+        x = layers.BatchNormalization(momentum=0.9)(x)
+        x = layers.LeakyReLU(0.2)(x)
+        
+        x = layers.Conv2D(
+            filters, 3, padding='same',
+            kernel_initializer='he_normal'
+        )(x)
+        x = layers.BatchNormalization(momentum=0.9)(x)
+        
+        # Match dimensions if needed
+        if shortcut.shape[-1] != filters:
+            shortcut = layers.Conv2D(
+                filters, 1, padding='same',
+                kernel_initializer='he_normal'
+            )(shortcut)
+        
+        x = layers.Add()([x, shortcut])
+        x = layers.LeakyReLU(0.2)(x)
+        
+        return x
+    
+    # Build full autoencoder with skip connections
+    encoder_input = layers.Input(shape=input_shape, name='encoder_input')
+    
+    # Encoder with skip connections
+    skip_connections = []
+    
+    # Block 1: 64x64 -> 32x32
+    x = residual_block(encoder_input, 64)
+    x = residual_block(x, 64)
+    skip_connections.append(x)
+    x = layers.MaxPooling2D(2)(x)
+    
+    # Block 2: 32x32 -> 16x16
+    x = residual_block(x, 128)
+    x = residual_block(x, 128)
+    skip_connections.append(x)
+    x = layers.MaxPooling2D(2)(x)
+    
+    # Block 3: 16x16 -> 8x8
+    x = residual_block(x, 256)
+    x = residual_block(x, 256)
+    skip_connections.append(x)
+    x = layers.MaxPooling2D(2)(x)
+    
+    # Block 4: 8x8 -> 4x4
+    x = residual_block(x, 512)
+    x = residual_block(x, 512)
+    skip_connections.append(x)
+    x = layers.MaxPooling2D(2)(x)
+    
+    # Bottleneck: 4x4 -> latent_dim
+    x = layers.Flatten()(x)
+    latent = layers.Dense(
+        latent_dim,
+        kernel_initializer='he_normal',
+        name='latent'
+    )(x)
+    
+    # Decoder with skip connections
+    x = layers.Dense(
+        4 * 4 * 512,
+        kernel_initializer='he_normal'
+    )(latent)
+    x = layers.Reshape((4, 4, 512))(x)
+    
+    # Block 1: 4x4 -> 8x8 (with skip connection)
+    x = layers.UpSampling2D(2, interpolation='bilinear')(x)
+    x = layers.Concatenate()([x, skip_connections[3]])
+    x = residual_block(x, 512)
+    x = residual_block(x, 256)
+    
+    # Block 2: 8x8 -> 16x16 (with skip connection)
+    x = layers.UpSampling2D(2, interpolation='bilinear')(x)
+    x = layers.Concatenate()([x, skip_connections[2]])
+    x = residual_block(x, 256)
+    x = residual_block(x, 128)
+    
+    # Block 3: 16x16 -> 32x32 (with skip connection)
+    x = layers.UpSampling2D(2, interpolation='bilinear')(x)
+    x = layers.Concatenate()([x, skip_connections[1]])
+    x = residual_block(x, 128)
+    x = residual_block(x, 64)
+    
+    # Block 4: 32x32 -> 64x64 (with skip connection)
+    x = layers.UpSampling2D(2, interpolation='bilinear')(x)
+    x = layers.Concatenate()([x, skip_connections[0]])
+    x = residual_block(x, 64)
+    x = residual_block(x, 64)
+    
+    # Output layer
+    decoder_output = layers.Conv2D(
+        3, 3,
+        activation='sigmoid',
+        padding='same',
+        kernel_initializer='glorot_uniform',
+        name='output'
+    )(x)
+    
+    # Full autoencoder
+    autoencoder = keras.Model(encoder_input, decoder_output, name='denoising_autoencoder')
+    
+    # Create separate encoder model
+    encoder = keras.Model(encoder_input, latent, name='encoder')
+    
+    # Create separate decoder model (without skip connections)
+    decoder_input = layers.Input(shape=(latent_dim,), name='decoder_input')
+    x_dec = layers.Dense(
+        4 * 4 * 512,
+        kernel_initializer='he_normal'
+    )(decoder_input)
+    x_dec = layers.Reshape((4, 4, 512))(x_dec)
+    
+    # Decoder blocks without skip connections
+    x_dec = layers.UpSampling2D(2, interpolation='bilinear')(x_dec)
+    x_dec = residual_block(x_dec, 512)
+    x_dec = residual_block(x_dec, 256)
+    
+    x_dec = layers.UpSampling2D(2, interpolation='bilinear')(x_dec)
+    x_dec = residual_block(x_dec, 256)
+    x_dec = residual_block(x_dec, 128)
+    
+    x_dec = layers.UpSampling2D(2, interpolation='bilinear')(x_dec)
+    x_dec = residual_block(x_dec, 128)
+    x_dec = residual_block(x_dec, 64)
+    
+    x_dec = layers.UpSampling2D(2, interpolation='bilinear')(x_dec)
+    x_dec = residual_block(x_dec, 64)
+    x_dec = residual_block(x_dec, 64)
+    
+    decoder_output_standalone = layers.Conv2D(
+        3, 3,
+        activation='sigmoid',
+        padding='same',
+        kernel_initializer='glorot_uniform',
+        name='output'
+    )(x_dec)
     decoder = keras.Model(decoder_input, decoder_output_standalone, name='decoder')
     
     return autoencoder, encoder, decoder

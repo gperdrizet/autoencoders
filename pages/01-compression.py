@@ -36,7 +36,6 @@ from src.streamlit_components import (
 # Page config
 st.set_page_config(
     page_title='Compression Demo',
-    page_icon=':black_large_square:',
     layout='wide'
 )
 
