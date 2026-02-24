@@ -1,0 +1,33 @@
+{
+  "name": "Autoencoders demo (CPU)",
+  "image": "mcr.microsoft.com/devcontainers/python:3.10",
+  "forwardPorts": [8501, 6006],
+  "remoteUser": "vscode",
+  "containerEnv": {
+    "TF_CPP_MIN_LOG_LEVEL": "1"
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/bin/python",
+        "jupyter.kernels.excludePythonEnvironments": [
+          "/bin/python",
+          "/bin/python3",
+          "/bin/python3.10",
+          "/usr/bin/python3",
+          "/usr/bin/python3.10"
+        ],
+        "remote.restoreForwardedPorts": false
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-toolsai.jupyter",
+        "streetsidesoftware.code-spell-checker",
+        "ms-toolsai.tensorboard"
+      ]
+    }
+  },
+  "onCreateCommand": "",
+  "postCreateCommand": "mkdir -p logs && mkdir -p models && mkdir -p data && pip install -r requirements.txt",
+  "postAttachCommand": ""
+}
