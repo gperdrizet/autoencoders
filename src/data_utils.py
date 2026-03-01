@@ -33,7 +33,7 @@ def load_df2k_ost(split='train', max_images=None):
     
     try:
         # Load dataset from HuggingFace
-        dataset = load_dataset(DATASET_REPO_ID, split=split, trust_remote_code=True)
+        dataset = load_dataset(DATASET_REPO_ID, split=split)
         
         if max_images is not None:
             dataset = dataset.select(range(min(max_images, len(dataset))))
