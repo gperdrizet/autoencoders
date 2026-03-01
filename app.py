@@ -6,13 +6,13 @@ import streamlit as st
 
 st.set_page_config(
     page_title="Autoencoders Demo",
-    page_icon="🧠",
+    page_icon="A",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ── Page Header ───────────────────────────────────────────────────────────────
-st.title("🧠 Autoencoders: Learning to Compress Reality")
+# ── Page Header ─────────────────────────────────────────────────────────
+st.title("Autoencoders: Learning to Compress Reality")
 st.markdown("*An interactive survey of what autoencoders can do — for bootcamp students*")
 
 st.divider()
@@ -28,7 +28,7 @@ representation and then **reconstruct** the original from that compressed form.
 
 ```
   Input  ──►  Encoder  ──►  Latent Space  ──►  Decoder  ──►  Output
-(49,152)         │              (128)               │         (49,152)
+(196,608)         │              (512)               │         (196,608)
                  └─── learns what matters ──────────┘
 ```
 
@@ -48,11 +48,10 @@ Autoencoders are a foundational concept that powers:
 
 | Application | What it learns |
 |---|---|
-| 🗜️ **Compression** | What visual features matter most |
-| 🔇 **Denoising** | Signal vs noise in data |
-
-| 🎨 **Generation** (VAE) | The distribution of data |
-| 🔍 **Representation Learning** | Meaningful features without labels |
+| Compression | What visual features matter most |
+| Denoising | Signal vs noise in data |
+| Generation (VAE) | The distribution of data |
+| Representation Learning | Meaningful features without labels |
 
 The same core idea — compress then reconstruct — applies across **images, audio,
 time series, text**, and more.
@@ -97,43 +96,43 @@ what clean images look like and pushes noisy inputs toward that space.
 st.divider()
 
 # ── Architecture Explainer ────────────────────────────────────────────────────
-with st.expander("📐 Architecture Details", expanded=False):
+with st.expander("Architecture Details", expanded=False):
     st.markdown("""
 ### Compression & Denoising Autoencoder (Convolutional)
 
 ```
 Encoder:
-  Input (128×128×3)
-  → Conv2D(64,  3×3, stride=2)  → BatchNorm → LeakyReLU  → 64×64×64
-  → Conv2D(128, 3×3, stride=2)  → BatchNorm → LeakyReLU  → 32×32×128
-  → Conv2D(256, 3×3, stride=2)  → BatchNorm → LeakyReLU  → 16×16×256
-  → Conv2D(512, 3×3, stride=2)  → BatchNorm → LeakyReLU  → 8×8×512
-  → Flatten → Dense(latent_dim)                           → 128
+  Input (256×256×3)
+  → Conv2D(64,  3×3, stride=2)  → BatchNorm → LeakyReLU  → 128×128×64
+  → Conv2D(128, 3×3, stride=2)  → BatchNorm → LeakyReLU  → 64×64×128
+  → Conv2D(256, 3×3, stride=2)  → BatchNorm → LeakyReLU  → 32×32×256
+  → Conv2D(512, 3×3, stride=2)  → BatchNorm → LeakyReLU  → 16×16×512
+  → Flatten → Dense(latent_dim)                           → 512
 
 Decoder (mirror image):
-  Dense(8×8×512) → Reshape(8,8,512)
-  → ConvTranspose(512, 3×3, stride=2) → BatchNorm → LeakyReLU  → 16×16×512
-  → ConvTranspose(256, 3×3, stride=2) → BatchNorm → LeakyReLU  → 32×32×256
-  → ConvTranspose(128, 3×3, stride=2) → BatchNorm → LeakyReLU  → 64×64×128
-  → ConvTranspose(64,  3×3, stride=2) → BatchNorm → LeakyReLU  → 128×128×64
-  → Conv2D(3, 3×3, sigmoid)                                     → 128×128×3
+  Dense(16×16×512) → Reshape(16,16,512)
+  → ConvTranspose(512, 3×3, stride=2) → BatchNorm → LeakyReLU  → 32×32×512
+  → ConvTranspose(256, 3×3, stride=2) → BatchNorm → LeakyReLU  → 64×64×256
+  → ConvTranspose(128, 3×3, stride=2) → BatchNorm → LeakyReLU  → 128×128×128
+  → ConvTranspose(64,  3×3, stride=2) → BatchNorm → LeakyReLU  → 256×256×64
+  → Conv2D(3, 3×3, sigmoid)                                     → 256×256×3
 ```
 
     """)
 
 # ── Dataset Info ──────────────────────────────────────────────────────────────
-with st.expander("📊 Dataset Information", expanded=False):
+with st.expander("Dataset Information", expanded=False):
     st.markdown("""
 ### DF2K_OST (Image demos)
-- **Source**: DIV2K high-resolution image dataset
-- **Processing**: Resized to 128×128 using Lanczos resampling
-- **Size**: 900 images
-- **Hosted**: [HuggingFace — gperdrizet/autoencoders](https://huggingface.co/datasets/gperdrizet/autoencoders)
+- **Source**: Combined dataset from DIV2K, Flickr2K, and OST
+- **Processing**: Resized to 256×256 using Lanczos resampling
+- **Size**: ~13,874 images (~90/10 train/validation split)
+- **Hosted**: [HuggingFace — gperdrizet/DF2K_OST](https://huggingface.co/datasets/gperdrizet/DF2K_OST)
     """)
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.divider()
 st.caption(
     "Built with TensorFlow · Streamlit · DF2K_OST | "
-    "Models hosted on [HuggingFace](https://huggingface.co/gperdrizet/autoencoders)"
+    "Models hosted on [HuggingFace](https://huggingface.co/gperdrizet)"
 )
