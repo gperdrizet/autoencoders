@@ -20,6 +20,7 @@ plotly
 Pillow>=10.0.0
 scikit-image>=0.21.0
 opencv-python>=4.8.0
+pyarrow>=14.0.1,<15.0.0  # Pin for cudf compatibility in dev container
 
 # Dimensionality Reduction
 umap-learn>=0.5.3

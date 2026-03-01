@@ -19,6 +19,7 @@ plotly
 # Image Processing
 Pillow>=10.0.0,<11.0.0
 scikit-image>=0.21.0,<1.0.0
+pyarrow>=14.0.1,<15.0.0  # Pin for compatibility
 
 # Dimensionality Reduction
 umap-learn>=0.5.3,<1.0.0
