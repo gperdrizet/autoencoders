@@ -1,5 +1,5 @@
 {
-  "name": "Autoencoders demo (CPU)",
+  "name": "Autoencoders CPU",
   "image": "mcr.microsoft.com/devcontainers/python:3.10",
   "forwardPorts": [8501, 6006],
   "remoteUser": "vscode",
