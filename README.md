@@ -1,226 +1,160 @@
-# Autoencoders demo
+# Autoencoders Demo
 
 Interactive demonstrations of autoencoder applications for AI/ML bootcamp students.
 
 ## Overview
 
-This repository contains three comprehensive demonstrations showing the power and versatility of autoencoders:
+This repository is a **survey of autoencoder applications** — the goal is to show
+*what autoencoders can do*, not to dive deep into implementation details.
 
-1. **Image compression** - Compress COCO images while maintaining quality
-2. **Image denoising** - Remove noise from corrupted images
-3. **Anomaly detection** - Identify unusual patterns using reconstruction error (Flowers vs COCO)
+Three demos, three different domains:
+
+1. **Image compression** — Compress 128×128 images to 128 numbers (384× ratio) using a convolutional AE trained on DF2K_OST high-quality photographs
+2. **Image denoising** — Remove Gaussian noise from images; the AE learns the manifold of clean images and pushes noisy inputs back onto it
+3. **ECG anomaly detection** — Train only on normal heartbeats; arrhythmias are flagged by their high reconstruction error — no anomaly labels needed for training
 
 Each demo includes:
 - **Training notebooks** - Step-by-step training with detailed explanations
 - **Interactive web app** - Streamlit-based demo for hands-on exploration
 - **Pre-trained models** - Ready-to-use models automatically downloaded from HuggingFace
 
-## Quick start
+## Quick Start
 
-### Installation
+### 1. Install dependencies
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd autoencoders
-   ```
+```bash
+pip install -r requirements.txt
+```
 
-2. **Install dependencies**
+### 2. Configure environment
 
-   For local development with GPU:
-   ```bash
-   pip install -r requirements.txt
-   ```
+Pre-trained models and datasets are hosted on HuggingFace and download automatically.
 
-   For Streamlit Cloud deployment:
-   ```bash
-   pip install -r requirements-cloud.txt
-   ```
+```bash
+cp .env.example .env
+```
 
-3. **Configure environment**
-   
-   Pre-trained models and datasets are hosted on HuggingFace and will download automatically.
-   
-   ```bash
-   cp .env.example .env
-   ```
-   
-   **For students:** Leave `.env` as-is to use pre-trained models - no HuggingFace account needed!
-   
-   **For instructors:** To re-train and upload your own models:
-   - Create a HuggingFace repository at https://huggingface.co/new
-   - Edit `.env` and update `HF_REPO_ID` with your repo name
-   - Get a token from https://huggingface.co/settings/tokens (write access)
-   - Add `HF_TOKEN` to `.env`
-   - Set `TRAIN_MODEL=True` in notebooks - trained models will auto-upload
+- **Students**: Leave `.env` as-is — no HuggingFace account needed.
+- **Instructors**: Set `HF_TOKEN` (write access) and `HF_REPO_ID` to re-train and upload your own models.
 
-### Running the Demos
-
-#### Option 1: Streamlit Web App (Recommended)
-
-Launch the interactive web application:
+### 3. Launch the Streamlit app
 
 ```bash
 streamlit run app.py
 ```
 
-Then navigate to `http://localhost:8501` in your browser.
+Then open <http://localhost:8501>.
 
-**Note:** Pre-trained models will automatically download from Hugging Face on first use. This may take a few minutes depending on your connection.
-
-#### Option 2: Training Notebooks
-
-Open Jupyter and run the training notebooks in order:
+### 4. (Optional) Run the training notebooks
 
 ```bash
 jupyter notebook
 ```
 
-Navigate to:
-1. `notebooks/01-compression.ipynb` - Train compression autoencoders (or download pre-trained)
-2. `notebooks/02-anomaly_detection.ipynb` - Train anomaly detector (or download pre-trained)
-3. `notebooks/02-denoising.ipynb` - Train denoising autoencoder (or download pre-trained)
+| Notebook | Description |
+|---|---|
+| `notebooks/01-compression.ipynb` | Train compression autoencoder (latent_dim=128, 50 epochs) |
+| `notebooks/02-denoising.ipynb` | Train denoising autoencoder (σ=25 Gaussian noise) |
+| `notebooks/03-anomaly-detection.ipynb` | Train ECG anomaly detector (normal beats only) |
 
-**Tip:** Set `TRAIN_MODEL = False` at the top of each notebook to use pre-trained models without training.
+Set `TRAIN_MODEL = False` in any notebook to skip training and use the pre-trained model.
 
-## Project structure
+---
+
+## Dataset
+
+**DF2K_OST** (image demos)
+- 900 high-quality photos from the DIV2K dataset, resized to 128×128 with Lanczos resampling
+- Hosted on HuggingFace: [gperdrizet/autoencoders](https://huggingface.co/datasets/gperdrizet/autoencoders)
+- Downloaded automatically on first run
+
+**ECG5000** (anomaly detection)
+- 5,000 single-heartbeat ECG windows, 140 time steps each
+- Source: UCR Time Series Archive / TensorFlow datasets
+- Classes: 1 = Normal, 2–5 = Various arrhythmias
+- Downloaded from `storage.googleapis.com/tensorflow` on first run
+
+---
+
+## Project Structure
 
 ```
 autoencoders/
-├── app.py                          # Main Streamlit app (landing page)
-├── pages/                          # Streamlit demo pages
-│   ├── 01-compression.py           # Compression demo
-│   ├── 02-anomaly_detection.py     # Anomaly detection demo
-│   └── 03-denoising.py             # Denoising demo
-├── notebooks/                      # Training notebooks
-│   ├── 01-compression.ipynb        # Train compression models
-│   ├── 02-anomaly_detection.ipynb  # Train anomaly detector
-│   └── 02-denoising.ipynb          # Train denoising model
-├── src/                           # Shared utilities
-│   ├── __init__.py
-│   ├── model_utils.py            # Model architectures & loading
-│   ├── data_utils.py             # Dataset loading & preprocessing
-│   ├── visualization.py          # Plotting functions
-│   ├── metrics.py                # Quality metrics
-│   ├── streamlit_components.py   # Reusable UI components
-│   └── huggingface_utils.py      # Model/dataset download/upload
-├── models/                        # Saved models (auto-downloaded from HF)
-│   ├── compression_ae_latent32.keras
-│   ├── compression_ae_latent64.keras
-│   ├── compression_ae_latent128.keras
-│   ├── compression_ae_latent256.keras
-│   ├── anomaly_ae.keras
-│   └── denoising_ae.keras
-├── data/                          # Dataset cache (auto-downloaded)
-├── logs/                          # TensorBoard logs
-├── .streamlit/                    # Streamlit configuration
-│   └── config.toml
-├── requirements.txt               # Local development dependencies
-├── requirements-cloud.txt         # Cloud deployment dependencies
-├── .env.example                   # Environment configuration template
-└── README.md                      # This file
+├── app.py                              # Streamlit landing page
+├── pages/
+│   ├── 01-compression.py               # Image compression demo
+│   ├── 02-denoising.py                 # Image denoising demo
+│   └── 03-anomaly-detection.py         # ECG anomaly detection demo
+├── notebooks/
+│   ├── 01-compression.ipynb            # Compression training notebook
+│   ├── 02-denoising.ipynb              # Denoising training notebook
+│   └── 03-anomaly-detection.ipynb      # Anomaly detection training notebook
+├── src/
+│   ├── data_utils.py                   # DF2K_OST loading, train/val split, noise
+│   ├── model_utils.py                  # AE architectures (compression, denoising, anomaly)
+│   └── metrics.py                      # PSNR, SSIM, MSE
+├── models/                             # Saved .keras models (downloaded from HF)
+├── logs/                               # TensorBoard logs & result images
+├── data/                               # Dataset cache
+├── requirements.txt                    # Local / GPU dependencies
+├── requirements-cloud.txt              # Streamlit Cloud (CPU) dependencies
+└── .env                                # HuggingFace credentials
 ```
 
+---
 
-## Training the models
+## Architecture
 
-**Note:** Pre-trained models are available on [Hugging Face Hub](https://huggingface.co/gperdrizet/autoencoders) and will download automatically when you run the app. You only need to train models if you want to experiment with different architectures or hyperparameters.
+### Image Autoencoder (compression & denoising)
 
-### Compression
-
-Run `notebooks/01-compression.ipynb` to train models with different latent dimensions:
-
-- Trains 4 models (latent dims: 32, 64, 128, 256)
-- ~50 epochs per model
-- Saves to `models/compression_ae_latent{dim}.keras`
-- Includes quality analysis and visualizations
-
-**Training Time:** ~30-60 minutes on GPU, ~2-4 hours on CPU
-
-### Anomaly detection
-
-Run `notebooks/03-anomaly_detection.ipynb` to train the anomaly detector:
-
-- Trains on 4 flower classes (dandelion, daisy, tulips, sunflowers)
-- Uses roses as anomalies
-- ~50 epochs
-- Saves to `models/anomaly_ae.keras`
-- Includes ROC analysis and threshold optimization
-
-**Training Time:** ~20-40 minutes on GPU, ~1-2 hours on CPU
-
-
-## Using the Streamlit app
-
-### Local Deployment
-
-```bash
-streamlit run app.py
+```
+Encoder                          Decoder
+──────────────────────           ──────────────────────────────
+Input  128×128×3                 Dense(8×8×512) → Reshape
+  Conv2D(64,  s=2) → 64×64×64    ConvT(512, s=2) → 16×16×512
+  Conv2D(128, s=2) → 32×32×128   ConvT(256, s=2) → 32×32×256
+  Conv2D(256, s=2) → 16×16×256   ConvT(128, s=2) → 64×64×128
+  Conv2D(512, s=2) →  8×8×512    ConvT(64,  s=2) → 128×128×64
+  Flatten → Dense(latent_dim)    Conv2D(3, sigmoid) → 128×128×3
 ```
 
-The app will open at `http://localhost:8501`
+Each Conv block uses BatchNorm + LeakyReLU(0.2).
 
-### Cloud deployment (Streamlit Community Cloud)
+- **Compression**: `latent_dim=128` → 384× compression ratio
+- **Denoising**: `latent_dim=256` → better quality, less compression
 
-1. **Push to GitHub**
-   ```bash
-   git add .
-   git commit -m "Add autoencoder demos"
-   git push origin main
-   ```
+### Anomaly Detection Autoencoder (dense / MLP)
 
-2. **Deploy on Streamlit Cloud**
-   - Go to [share.streamlit.io](https://share.streamlit.io)
-   - Click "New app"
-   - Select your repository
-   - Set main file: `app.py`
-   - Set Python version: 3.9+
-   - Click "Deploy"
-
-3. **Configuration**
-   - Uses `requirements-cloud.txt` automatically
-   - TensorFlow CPU version for smaller footprint
-   - Models download automatically from Hugging Face
-   - Set `HF_REPO_ID` in Streamlit Cloud secrets if using a private repository
-
-## Model details
-
-### Architecture
-
-All models use **4-5 layer convolutional architectures**:
-
-**Encoder:**
 ```
-Input (32x32x3)
-  | Conv2D(64) + BN + ReLU
-  | Conv2D(128) + BN + ReLU
-  | Conv2D(256) + BN + ReLU
-  | Conv2D(512) + BN + ReLU
-  | Flatten -> Dense(latent_dim)
-Latent Vector
+Encoder: Input(140) → Dense(128) → Dense(64) → Dense(32)  [latent]
+Decoder: Dense(64)  → Dense(128) → Dense(140, sigmoid)
 ```
 
-**Decoder:**
-```
-Latent Vector
-  | Dense(2x2x512) -> Reshape
-  | Conv2DTranspose(512) + BN + ReLU
-  | Conv2DTranspose(256) + BN + ReLU
-  | Conv2DTranspose(128) + BN + ReLU
-  | Conv2DTranspose(64) + BN + ReLU
-  | Conv2D(3) + Sigmoid
-Output (32x32x3)
-```
+---
 
-## Contributing
+## Performance Targets
 
-This is an educational project for bootcamp students. Contributions are welcome!
+| Demo | Metric | Target | Notes |
+|---|---|---|---|
+| Compression | PSNR | > 30 dB | At 384× compression ratio |
+| Compression | SSIM | > 0.90 | |
+| Denoising | PSNR | > 28 dB | vs noisy input at σ=25 |
+| Denoising | SSIM | > 0.85 | |
+| Anomaly Detection | AUC-ROC | > 0.90 | Normal vs all arrhythmia classes |
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+---
+
+## Deploying to Streamlit Cloud
+
+1. Push to GitHub
+2. Go to [share.streamlit.io](https://share.streamlit.io) → New app
+3. Set main file: `app.py`, Python 3.10+
+4. Add `HF_REPO_ID` (and optionally `HF_TOKEN`) to Streamlit secrets
+5. The app uses `requirements-cloud.txt` (CPU-only TensorFlow) automatically
+
+---
 
 ## License
+
 
 MIT License - see LICENSE file for details

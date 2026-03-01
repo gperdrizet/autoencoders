@@ -1,657 +1,147 @@
 """
-Model utilities for building, loading, and managing autoencoder models.
+Model architectures for image compression and denoising autoencoders.
 """
 
-# Standard library imports
-from pathlib import Path
-
-# Third-party imports
-import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 
 
-def build_compression_ae(latent_dim=128, input_shape=(64, 64, 3)):
+def build_compression_ae(latent_dim=512, input_shape=(128, 128, 3)):
     """
     Build a convolutional autoencoder for image compression.
     
+    Architecture:
+        Encoder: Conv2D layers progressively reduce spatial dimensions
+        Latent: Dense bottleneck layer (ALL information must pass through here)
+        Decoder: Conv2DTranspose layers reconstruct from latent only
+    
     Args:
-        latent_dim: Dimension of the latent representation
-        input_shape: Shape of input images (default: 64x64 for flowers)
+        latent_dim: Dimension of compressed representation (default: 512)
+        input_shape: Input image shape (H, W, C)
     
     Returns:
-        Keras Model instance
+        (autoencoder, encoder, decoder) - Full model and component models
     """
-    # Encoder
-    encoder_input = layers.Input(shape=input_shape, name='encoder_input')
+    # Calculate compression ratio
+    input_size = input_shape[0] * input_shape[1] * input_shape[2]
+    compression_ratio = input_size / latent_dim
     
-    x = layers.Conv2D(64, 3, strides=2, padding='same', activation='relu', name='enc_conv1')(encoder_input)
-    x = layers.BatchNormalization()(x)
+    print(f"\nBuilding Compression Autoencoder")
+    print(f"  Input shape: {input_shape}")
+    print(f"  Latent dimension: {latent_dim}")
+    print(f"  Compression ratio: {compression_ratio:.1f}×")
     
-    x = layers.Conv2D(128, 3, strides=2, padding='same', activation='relu', name='enc_conv2')(x)
-    x = layers.BatchNormalization()(x)
+    # ============ ENCODER ============
+    encoder_input = layers.Input(shape=input_shape, name='input_image')
+    x = encoder_input
     
-    x = layers.Conv2D(256, 3, strides=2, padding='same', activation='relu', name='enc_conv3')(x)
-    x = layers.BatchNormalization()(x)
+    # Downsampling blocks with deeper convolutions
+    # 128×128 → 64×64
+    x = layers.Conv2D(64, 3, strides=2, padding='same', name='enc_conv1')(x)
+    x = layers.BatchNormalization(name='enc_bn1')(x)
+    x = layers.LeakyReLU(0.2, name='enc_relu1')(x)
+    x = layers.Conv2D(64, 3, padding='same', name='enc_conv1b')(x)
+    x = layers.BatchNormalization(name='enc_bn1b')(x)
+    x = layers.LeakyReLU(0.2, name='enc_relu1b')(x)
     
-    x = layers.Conv2D(512, 3, strides=2, padding='same', activation='relu', name='enc_conv4')(x)
-    x = layers.BatchNormalization()(x)
+    # 64×64 → 32×32
+    x = layers.Conv2D(128, 3, strides=2, padding='same', name='enc_conv2')(x)
+    x = layers.BatchNormalization(name='enc_bn2')(x)
+    x = layers.LeakyReLU(0.2, name='enc_relu2')(x)
+    x = layers.Conv2D(128, 3, padding='same', name='enc_conv2b')(x)
+    x = layers.BatchNormalization(name='enc_bn2b')(x)
+    x = layers.LeakyReLU(0.2, name='enc_relu2b')(x)
     
-    x = layers.Flatten()(x)
+    # 32×32 → 16×16
+    x = layers.Conv2D(256, 3, strides=2, padding='same', name='enc_conv3')(x)
+    x = layers.BatchNormalization(name='enc_bn3')(x)
+    x = layers.LeakyReLU(0.2, name='enc_relu3')(x)
+    x = layers.Conv2D(256, 3, padding='same', name='enc_conv3b')(x)
+    x = layers.BatchNormalization(name='enc_bn3b')(x)
+    x = layers.LeakyReLU(0.2, name='enc_relu3b')(x)
+    
+    # 16×16 → 8×8
+    x = layers.Conv2D(512, 3, strides=2, padding='same', name='enc_conv4')(x)
+    x = layers.BatchNormalization(name='enc_bn4')(x)
+    x = layers.LeakyReLU(0.2, name='enc_relu4')(x)
+    x = layers.Conv2D(512, 3, padding='same', name='enc_conv4b')(x)
+    x = layers.BatchNormalization(name='enc_bn4b')(x)
+    x = layers.LeakyReLU(0.2, name='enc_relu4b')(x)
+    
+    # Flatten and compress to latent dimension
+    x = layers.Flatten(name='enc_flatten')(x)
     latent = layers.Dense(latent_dim, activation='relu', name='latent')(x)
     
     encoder = keras.Model(encoder_input, latent, name='encoder')
     
-    # Decoder
-    decoder_input = layers.Input(shape=(latent_dim,), name='decoder_input')
+    # ============ DECODER ============
+    decoder_input = layers.Input(shape=(latent_dim,), name='latent_input')
+    x = decoder_input
     
-    x = layers.Dense(4 * 4 * 512, activation='relu')(decoder_input)
-    x = layers.Reshape((4, 4, 512))(x)
+    # Project and reshape
+    x = layers.Dense(8 * 8 * 512, activation='relu', name='dec_dense')(x)
+    x = layers.Reshape((8, 8, 512), name='dec_reshape')(x)
     
-    x = layers.Conv2DTranspose(512, 3, strides=2, padding='same', activation='relu', name='dec_conv1')(x)
-    x = layers.BatchNormalization()(x)
+    # Upsampling blocks (deeper to match encoder)
+    # 8×8 → 16×16
+    x = layers.Conv2DTranspose(512, 3, strides=2, padding='same', name='dec_conv1')(x)
+    x = layers.BatchNormalization(name='dec_bn1')(x)
+    x = layers.LeakyReLU(0.2, name='dec_relu1')(x)
+    x = layers.Conv2D(512, 3, padding='same', name='dec_conv1b')(x)
+    x = layers.BatchNormalization(name='dec_bn1b')(x)
+    x = layers.LeakyReLU(0.2, name='dec_relu1b')(x)
     
-    x = layers.Conv2DTranspose(256, 3, strides=2, padding='same', activation='relu', name='dec_conv2')(x)
-    x = layers.BatchNormalization()(x)
+    # 16×16 → 32×32
+    x = layers.Conv2DTranspose(256, 3, strides=2, padding='same', name='dec_conv2')(x)
+    x = layers.BatchNormalization(name='dec_bn2')(x)
+    x = layers.LeakyReLU(0.2, name='dec_relu2')(x)
+    x = layers.Conv2D(256, 3, padding='same', name='dec_conv2b')(x)
+    x = layers.BatchNormalization(name='dec_bn2b')(x)
+    x = layers.LeakyReLU(0.2, name='dec_relu2b')(x)
     
-    x = layers.Conv2DTranspose(128, 3, strides=2, padding='same', activation='relu', name='dec_conv3')(x)
-    x = layers.BatchNormalization()(x)
+    # 32×32 → 64×64
+    x = layers.Conv2DTranspose(128, 3, strides=2, padding='same', name='dec_conv3')(x)
+    x = layers.BatchNormalization(name='dec_bn3')(x)
+    x = layers.LeakyReLU(0.2, name='dec_relu3')(x)
+    x = layers.Conv2D(128, 3, padding='same', name='dec_conv3b')(x)
+    x = layers.BatchNormalization(name='dec_bn3b')(x)
+    x = layers.LeakyReLU(0.2, name='dec_relu3b')(x)
     
-    x = layers.Conv2DTranspose(64, 3, strides=2, padding='same', activation='relu', name='dec_conv4')(x)
-    x = layers.BatchNormalization()(x)
+    # 64×64 → 128×128
+    x = layers.Conv2DTranspose(64, 3, strides=2, padding='same', name='dec_conv4')(x)
+    x = layers.BatchNormalization(name='dec_bn4')(x)
+    x = layers.LeakyReLU(0.2, name='dec_relu4')(x)
+    x = layers.Conv2D(64, 3, padding='same', name='dec_conv4b')(x)
+    x = layers.BatchNormalization(name='dec_bn4b')(x)
+    x = layers.LeakyReLU(0.2, name='dec_relu4b')(x)
     
-    decoder_output = layers.Conv2D(3, 3, padding='same', activation='sigmoid', name='decoder_output')(x)
+    # Final output layer
+    reconstructed = layers.Conv2D(3, 3, padding='same', activation='sigmoid', name='output_image')(x)
     
-    decoder = keras.Model(decoder_input, decoder_output, name='decoder')
+    decoder = keras.Model(decoder_input, reconstructed, name='decoder')
     
-    # Full autoencoder
+    # ============ FULL AUTOENCODER ============
+    # All information flows through the latent bottleneck
     ae_output = decoder(encoder(encoder_input))
     autoencoder = keras.Model(encoder_input, ae_output, name='autoencoder')
     
     return autoencoder, encoder, decoder
 
 
-def build_compression_ae_v2(latent_dim=256, input_shape=(64, 64, 3)):
+def build_denoising_ae(input_shape=(128, 128, 3)):
     """
-    Enhanced compression autoencoder with skip connections and residual blocks.
+    Build a denoising autoencoder.
     
-    Architecture improvements:
-    - U-Net style skip connections for detail preservation
-    - Residual blocks for better gradient flow
-    - LeakyReLU activation for better feature learning
-    - Deeper architecture with more filters
-    
-    References:
-    - Skip Connections: Ronneberger et al. "U-Net: Convolutional Networks for
-      Biomedical Image Segmentation" (MICCAI 2015)
-    - Residual Blocks: He et al. "Deep Residual Learning for Image Recognition"
-      (CVPR 2016)
+    Uses same architecture as compression AE but with latent_dim=256
+    for better reconstruction quality (less aggressive compression).
     
     Args:
-        latent_dim: Dimension of the latent space
-        input_shape: Shape of input images
+        input_shape: Input image shape (H, W, C)
     
     Returns:
-        Tuple of (autoencoder, encoder, decoder) models
+        autoencoder model
     """
-    
-    def residual_block(x, filters):
-        """Residual block with batch normalization."""
-        shortcut = x
-        
-        x = layers.Conv2D(
-            filters, 3, padding='same',
-            kernel_initializer='he_normal'  # He initialization for better gradient flow
-        )(x)
-        x = layers.BatchNormalization(momentum=0.9)(x)  # Faster adaptation
-        x = layers.LeakyReLU(0.2)(x)
-        
-        x = layers.Conv2D(
-            filters, 3, padding='same',
-            kernel_initializer='he_normal'
-        )(x)
-        x = layers.BatchNormalization(momentum=0.9)(x)
-        
-        # Match dimensions if needed
-        if shortcut.shape[-1] != filters:
-            shortcut = layers.Conv2D(
-                filters, 1, padding='same',
-                kernel_initializer='he_normal'
-            )(shortcut)
-        
-        x = layers.Add()([x, shortcut])
-        x = layers.LeakyReLU(0.2)(x)
-        
-        return x
-    
-    # Build full autoencoder as single functional model (for skip connections)
-    encoder_input = layers.Input(shape=input_shape, name='encoder_input')
-    
-    # Encoder with skip connections
-    skip_connections = []
-    
-    # Block 1: 64x64 -> 32x32
-    x = residual_block(encoder_input, 64)
-    x = residual_block(x, 64)
-    skip_connections.append(x)
-    x = layers.MaxPooling2D(2)(x)
-    
-    # Block 2: 32x32 -> 16x16
-    x = residual_block(x, 128)
-    x = residual_block(x, 128)
-    skip_connections.append(x)
-    x = layers.MaxPooling2D(2)(x)
-    
-    # Block 3: 16x16 -> 8x8
-    x = residual_block(x, 256)
-    x = residual_block(x, 256)
-    skip_connections.append(x)
-    x = layers.MaxPooling2D(2)(x)
-    
-    # Block 4: 8x8 -> 4x4
-    x = residual_block(x, 512)
-    x = residual_block(x, 512)
-    skip_connections.append(x)
-    x = layers.MaxPooling2D(2)(x)
-    
-    # Bottleneck: 4x4 -> latent_dim
-    x = layers.Flatten()(x)
-    latent = layers.Dense(
-        latent_dim,
-        kernel_initializer='he_normal',
-        name='latent'
-    )(x)
-    
-    # Decoder with skip connections
-    # Reshape to 4x4x512
-    x = layers.Dense(
-        4 * 4 * 512,
-        kernel_initializer='he_normal'
-    )(latent)
-    x = layers.Reshape((4, 4, 512))(x)
-    
-    # Block 1: 4x4 -> 8x8 (with skip connection)
-    x = layers.UpSampling2D(2, interpolation='bilinear')(x)
-    x = layers.Concatenate()([x, skip_connections[3]])
-    x = residual_block(x, 512)
-    x = residual_block(x, 256)
-    
-    # Block 2: 8x8 -> 16x16 (with skip connection)
-    x = layers.UpSampling2D(2, interpolation='bilinear')(x)
-    x = layers.Concatenate()([x, skip_connections[2]])
-    x = residual_block(x, 256)
-    x = residual_block(x, 128)
-    
-    # Block 3: 16x16 -> 32x32 (with skip connection)
-    x = layers.UpSampling2D(2, interpolation='bilinear')(x)
-    x = layers.Concatenate()([x, skip_connections[1]])
-    x = residual_block(x, 128)
-    x = residual_block(x, 64)
-    
-    # Block 4: 32x32 -> 64x64 (with skip connection)
-    x = layers.UpSampling2D(2, interpolation='bilinear')(x)
-    x = layers.Concatenate()([x, skip_connections[0]])
-    x = residual_block(x, 64)
-    x = residual_block(x, 64)
-    
-    # Output layer
-    decoder_output = layers.Conv2D(
-        3, 3,
-        activation='sigmoid',
-        padding='same',
-        kernel_initializer='glorot_uniform',  # Xavier for sigmoid output
-        name='output'
-    )(x)
-    
-    # Full autoencoder
-    autoencoder = keras.Model(encoder_input, decoder_output, name='autoencoder_v2')
-    
-    # Create separate encoder model (for inference/analysis)
-    encoder = keras.Model(encoder_input, latent, name='encoder')
-    
-    # Create separate decoder model (without skip connections, for inference)
-    decoder_input = layers.Input(shape=(latent_dim,), name='decoder_input')
-    x_dec = layers.Dense(
-        4 * 4 * 512,
-        kernel_initializer='he_normal'
-    )(decoder_input)
-    x_dec = layers.Reshape((4, 4, 512))(x_dec)
-    
-    # Decoder blocks without skip connections (for standalone decoder)
-    x_dec = layers.UpSampling2D(2, interpolation='bilinear')(x_dec)
-    x_dec = residual_block(x_dec, 512)
-    x_dec = residual_block(x_dec, 256)
-    
-    x_dec = layers.UpSampling2D(2, interpolation='bilinear')(x_dec)
-    x_dec = residual_block(x_dec, 256)
-    x_dec = residual_block(x_dec, 128)
-    
-    x_dec = layers.UpSampling2D(2, interpolation='bilinear')(x_dec)
-    x_dec = residual_block(x_dec, 128)
-    x_dec = residual_block(x_dec, 64)
-    
-    x_dec = layers.UpSampling2D(2, interpolation='bilinear')(x_dec)
-    x_dec = residual_block(x_dec, 64)
-    x_dec = residual_block(x_dec, 64)
-    
-    decoder_output_standalone = layers.Conv2D(
-        3, 3,
-        activation='sigmoid',
-        padding='same',
-        kernel_initializer='glorot_uniform',
-        name='output'
-    )(x_dec)
-    decoder = keras.Model(decoder_input, decoder_output_standalone, name='decoder')
-    
-    return autoencoder, encoder, decoder
-
-
-def build_denoising_ae(latent_dim=128, input_shape=(64, 64, 3)):
-    """
-    Enhanced denoising autoencoder with skip connections and residual blocks.
-    
-    Architecture improvements:
-    - U-Net style skip connections for detail preservation
-    - Residual blocks for better gradient flow
-    - LeakyReLU activation for better feature learning
-    - He initialization for improved weight scaling
-    
-    The denoising autoencoder is trained with noisy inputs and clean targets,
-    forcing it to learn noise-resistant features.
-    
-    References:
-    - Skip Connections: Ronneberger et al. "U-Net: Convolutional Networks for
-      Biomedical Image Segmentation" (MICCAI 2015)
-    - Residual Blocks: He et al. "Deep Residual Learning for Image Recognition"
-      (CVPR 2016)
-    
-    Args:
-        latent_dim: Dimension of the latent space
-        input_shape: Shape of input images
-    
-    Returns:
-        Tuple of (autoencoder, encoder, decoder) models
-    """
-    
-    def residual_block(x, filters):
-        """Residual block with batch normalization."""
-        shortcut = x
-        
-        x = layers.Conv2D(
-            filters, 3, padding='same',
-            kernel_initializer='he_normal'
-        )(x)
-        x = layers.BatchNormalization(momentum=0.9)(x)
-        x = layers.LeakyReLU(0.2)(x)
-        
-        x = layers.Conv2D(
-            filters, 3, padding='same',
-            kernel_initializer='he_normal'
-        )(x)
-        x = layers.BatchNormalization(momentum=0.9)(x)
-        
-        # Match dimensions if needed
-        if shortcut.shape[-1] != filters:
-            shortcut = layers.Conv2D(
-                filters, 1, padding='same',
-                kernel_initializer='he_normal'
-            )(shortcut)
-        
-        x = layers.Add()([x, shortcut])
-        x = layers.LeakyReLU(0.2)(x)
-        
-        return x
-    
-    # Build full autoencoder with skip connections
-    encoder_input = layers.Input(shape=input_shape, name='encoder_input')
-    
-    # Encoder with skip connections
-    skip_connections = []
-    
-    # Block 1: 64x64 -> 32x32
-    x = residual_block(encoder_input, 64)
-    x = residual_block(x, 64)
-    skip_connections.append(x)
-    x = layers.MaxPooling2D(2)(x)
-    
-    # Block 2: 32x32 -> 16x16
-    x = residual_block(x, 128)
-    x = residual_block(x, 128)
-    skip_connections.append(x)
-    x = layers.MaxPooling2D(2)(x)
-    
-    # Block 3: 16x16 -> 8x8
-    x = residual_block(x, 256)
-    x = residual_block(x, 256)
-    skip_connections.append(x)
-    x = layers.MaxPooling2D(2)(x)
-    
-    # Block 4: 8x8 -> 4x4
-    x = residual_block(x, 512)
-    x = residual_block(x, 512)
-    skip_connections.append(x)
-    x = layers.MaxPooling2D(2)(x)
-    
-    # Bottleneck: 4x4 -> latent_dim
-    x = layers.Flatten()(x)
-    latent = layers.Dense(
-        latent_dim,
-        kernel_initializer='he_normal',
-        name='latent'
-    )(x)
-    
-    # Decoder with skip connections
-    x = layers.Dense(
-        4 * 4 * 512,
-        kernel_initializer='he_normal'
-    )(latent)
-    x = layers.Reshape((4, 4, 512))(x)
-    
-    # Block 1: 4x4 -> 8x8 (with skip connection)
-    x = layers.UpSampling2D(2, interpolation='bilinear')(x)
-    x = layers.Concatenate()([x, skip_connections[3]])
-    x = residual_block(x, 512)
-    x = residual_block(x, 256)
-    
-    # Block 2: 8x8 -> 16x16 (with skip connection)
-    x = layers.UpSampling2D(2, interpolation='bilinear')(x)
-    x = layers.Concatenate()([x, skip_connections[2]])
-    x = residual_block(x, 256)
-    x = residual_block(x, 128)
-    
-    # Block 3: 16x16 -> 32x32 (with skip connection)
-    x = layers.UpSampling2D(2, interpolation='bilinear')(x)
-    x = layers.Concatenate()([x, skip_connections[1]])
-    x = residual_block(x, 128)
-    x = residual_block(x, 64)
-    
-    # Block 4: 32x32 -> 64x64 (with skip connection)
-    x = layers.UpSampling2D(2, interpolation='bilinear')(x)
-    x = layers.Concatenate()([x, skip_connections[0]])
-    x = residual_block(x, 64)
-    x = residual_block(x, 64)
-    
-    # Output layer
-    decoder_output = layers.Conv2D(
-        3, 3,
-        activation='sigmoid',
-        padding='same',
-        kernel_initializer='glorot_uniform',
-        name='output'
-    )(x)
-    
-    # Full autoencoder
-    autoencoder = keras.Model(encoder_input, decoder_output, name='denoising_autoencoder')
-    
-    # Create separate encoder model
-    encoder = keras.Model(encoder_input, latent, name='encoder')
-    
-    # Create separate decoder model (without skip connections)
-    decoder_input = layers.Input(shape=(latent_dim,), name='decoder_input')
-    x_dec = layers.Dense(
-        4 * 4 * 512,
-        kernel_initializer='he_normal'
-    )(decoder_input)
-    x_dec = layers.Reshape((4, 4, 512))(x_dec)
-    
-    # Decoder blocks without skip connections
-    x_dec = layers.UpSampling2D(2, interpolation='bilinear')(x_dec)
-    x_dec = residual_block(x_dec, 512)
-    x_dec = residual_block(x_dec, 256)
-    
-    x_dec = layers.UpSampling2D(2, interpolation='bilinear')(x_dec)
-    x_dec = residual_block(x_dec, 256)
-    x_dec = residual_block(x_dec, 128)
-    
-    x_dec = layers.UpSampling2D(2, interpolation='bilinear')(x_dec)
-    x_dec = residual_block(x_dec, 128)
-    x_dec = residual_block(x_dec, 64)
-    
-    x_dec = layers.UpSampling2D(2, interpolation='bilinear')(x_dec)
-    x_dec = residual_block(x_dec, 64)
-    x_dec = residual_block(x_dec, 64)
-    
-    decoder_output_standalone = layers.Conv2D(
-        3, 3,
-        activation='sigmoid',
-        padding='same',
-        kernel_initializer='glorot_uniform',
-        name='output'
-    )(x_dec)
-    decoder = keras.Model(decoder_input, decoder_output_standalone, name='decoder')
-    
-    return autoencoder, encoder, decoder
-
-
-def build_anomaly_ae(latent_dim=128, input_shape=(64, 64, 3)):
-    """
-    Build a convolutional autoencoder for anomaly detection.
-    Uses same architecture as compression AE.
-    
-    Args:
-        latent_dim: Dimension of the latent representation
-        input_shape: Shape of input images
-    
-    Returns:
-        Keras Model instance (autoencoder only)
-    """
-    autoencoder, _, _ = build_compression_ae(latent_dim, input_shape)
+    # Use larger latent dimension for denoising (preserve more detail)
+    autoencoder, _, _ = build_compression_ae(latent_dim=256, input_shape=input_shape)
     return autoencoder
-
-
-class Sampling(layers.Layer):
-    """Reparameterization trick for VAE sampling."""
-    
-    def call(self, inputs):
-        z_mean, z_log_var = inputs
-        batch = tf.shape(z_mean)[0]
-        dim = tf.shape(z_mean)[1]
-        epsilon = tf.random.normal(shape=(batch, dim))
-        return z_mean + tf.exp(0.5 * z_log_var) * epsilon
-
-
-def build_vae(latent_dim=128, input_shape=(64, 64, 3)):
-    """
-    Build a Variational Autoencoder (VAE) for image generation.
-    
-    Args:
-        latent_dim: Dimension of the latent space
-        input_shape: Shape of input images
-    
-    Returns:
-        Tuple of (vae, encoder, decoder)
-    """
-    # Encoder
-    encoder_input = layers.Input(shape=input_shape, name='encoder_input')
-    
-    x = layers.Conv2D(64, 3, strides=2, padding='same', activation='relu')(encoder_input)
-    x = layers.BatchNormalization()(x)
-    
-    x = layers.Conv2D(128, 3, strides=2, padding='same', activation='relu')(x)
-    x = layers.BatchNormalization()(x)
-    
-    x = layers.Conv2D(256, 3, strides=2, padding='same', activation='relu')(x)
-    x = layers.BatchNormalization()(x)
-    
-    x = layers.Conv2D(512, 3, strides=2, padding='same', activation='relu')(x)
-    x = layers.BatchNormalization()(x)
-    
-    x = layers.Flatten()(x)
-    x = layers.Dense(256, activation='relu')(x)
-    
-    z_mean = layers.Dense(latent_dim, name='z_mean')(x)
-    z_log_var = layers.Dense(latent_dim, name='z_log_var')(x)
-    z = Sampling()([z_mean, z_log_var])
-    
-    encoder = keras.Model(encoder_input, [z_mean, z_log_var, z], name='encoder')
-    
-    # Decoder
-    decoder_input = layers.Input(shape=(latent_dim,), name='decoder_input')
-    
-    x = layers.Dense(4 * 4 * 512, activation='relu')(decoder_input)
-    x = layers.Reshape((4, 4, 512))(x)
-    
-    x = layers.Conv2DTranspose(512, 3, strides=2, padding='same', activation='relu')(x)
-    x = layers.BatchNormalization()(x)
-    
-    x = layers.Conv2DTranspose(256, 3, strides=2, padding='same', activation='relu')(x)
-    x = layers.BatchNormalization()(x)
-    
-    x = layers.Conv2DTranspose(128, 3, strides=2, padding='same', activation='relu')(x)
-    x = layers.BatchNormalization()(x)
-    
-    x = layers.Conv2DTranspose(64, 3, strides=2, padding='same', activation='relu')(x)
-    x = layers.BatchNormalization()(x)
-    
-    decoder_output = layers.Conv2D(3, 3, padding='same', activation='sigmoid')(x)
-    
-    decoder = keras.Model(decoder_input, decoder_output, name='decoder')
-    
-    # VAE Model
-    class VAE(keras.Model):
-        def __init__(self, encoder, decoder, **kwargs):
-            super().__init__(**kwargs)
-            self.encoder = encoder
-            self.decoder = decoder
-            self.total_loss_tracker = keras.metrics.Mean(name='total_loss')
-            self.reconstruction_loss_tracker = keras.metrics.Mean(name='reconstruction_loss')
-            self.kl_loss_tracker = keras.metrics.Mean(name='kl_loss')
-        
-        @property
-        def metrics(self):
-            return [
-                self.total_loss_tracker,
-                self.reconstruction_loss_tracker,
-                self.kl_loss_tracker,
-            ]
-        
-        def train_step(self, data):
-            with tf.GradientTape() as tape:
-                z_mean, z_log_var, z = self.encoder(data)
-                reconstruction = self.decoder(z)
-                
-                # Reconstruction loss
-                reconstruction_loss = tf.reduce_mean(
-                    tf.reduce_sum(
-                        keras.losses.binary_crossentropy(data, reconstruction),
-                        axis=(1, 2)
-                    )
-                )
-                
-                # KL divergence loss
-                kl_loss = -0.5 * tf.reduce_mean(
-                    tf.reduce_sum(1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var), axis=1)
-                )
-                
-                # Total loss (beta-VAE with beta=0.0005 for flowers dataset)
-                total_loss = reconstruction_loss + 0.0005 * kl_loss
-            
-            grads = tape.gradient(total_loss, self.trainable_weights)
-            self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
-            
-            self.total_loss_tracker.update_state(total_loss)
-            self.reconstruction_loss_tracker.update_state(reconstruction_loss)
-            self.kl_loss_tracker.update_state(kl_loss)
-            
-            return {
-                'loss': self.total_loss_tracker.result(),
-                'reconstruction_loss': self.reconstruction_loss_tracker.result(),
-                'kl_loss': self.kl_loss_tracker.result(),
-            }
-        
-        def call(self, inputs):
-            z_mean, z_log_var, z = self.encoder(inputs)
-            return self.decoder(z)
-    
-    vae = VAE(encoder, decoder, name='vae')
-    
-    return vae, encoder, decoder
-
-
-def load_model(model_path):
-    """
-    Load a trained model from disk.
-    
-    Args:
-        model_path: Path to the .keras model file
-    
-    Returns:
-        Loaded Keras model
-    """
-    model_path = Path(model_path)
-    
-    if not model_path.exists():
-        raise FileNotFoundError(f'Model not found: {model_path}')
-    
-    # Load with custom objects for VAE
-    custom_objects = {'Sampling': Sampling}
-    
-    try:
-        model = keras.models.load_model(model_path, custom_objects=custom_objects)
-        return model
-    except Exception as e:
-        raise RuntimeError(f'Failed to load model from {model_path}: {e}')
-
-
-def quantize_model_float16(model):
-    """
-    Apply float16 quantization to a model for deployment.
-    
-    This reduces model size by ~50% with minimal quality loss.
-    
-    Args:
-        model: Keras model to quantize
-    
-    Returns:
-        Quantized model
-    """
-    # Convert to float16
-    converter = tf.lite.TFLiteConverter.from_keras_model(model)
-    converter.optimizations = [tf.lite.Optimize.DEFAULT]
-    converter.target_spec.supported_types = [tf.float16]
-    
-    tflite_model = converter.convert()
-    
-    return tflite_model
-
-
-def save_quantized_model(model, output_path):
-    """
-    Save a float16 quantized version of the model.
-    
-    Args:
-        model: Keras model to quantize and save
-        output_path: Path to save the .tflite model
-    """
-    output_path = Path(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    tflite_model = quantize_model_float16(model)
-    
-    with open(output_path, 'wb') as f:
-        f.write(tflite_model)
-    
-    print(f'Quantized model saved to {output_path}')
-
-
-def get_model_info(model):
-    """
-    Get information about a model.
-    
-    Args:
-        model: Keras model
-    
-    Returns:
-        Dictionary with model information
-    """
-    total_params = model.count_params()
-    trainable_params = sum([tf.size(w).numpy() for w in model.trainable_weights])
-    
-    return {
-        'total_parameters': total_params,
-        'trainable_parameters': trainable_params,
-        'layers': len(model.layers),
-        'input_shape': model.input_shape,
-        'output_shape': model.output_shape,
-    }

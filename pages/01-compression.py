@@ -1,294 +1,246 @@
 """
-Image Compression Demo - Streamlit Page
-
-Interactive demonstration of image compression using autoencoders.
+Streamlit demo page: Image Compression with Autoencoders
 """
 
-# Standard library imports
+import io
+import os
 import sys
 from pathlib import Path
 
-# Third-party imports
 import numpy as np
 import streamlit as st
+from PIL import Image
 
-# Add src to path
-BASE_DIR = Path(__file__).parent.parent
-sys.path.append(str(BASE_DIR))
-MODELS_DIR = BASE_DIR / 'models'
-
-# Local imports
-from src.data_utils import COCO_CLASSES, load_coco, preprocess_image
-from src.metrics import compute_metrics_summary
-from src.model_utils import load_model
-from src.visualization import create_plotly_comparison, create_plotly_heatmap
-from src.streamlit_components import (
-    render_header,
-    render_model_info_sidebar,
-    render_image_uploader,
-    render_sample_selector,
-    create_download_button,
-    render_metrics_display,
-    render_explanation_expander,
-    show_loading_message
-)
-
-# Page config
+# ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title='Compression Demo',
-    layout='wide'
+    page_title="Image Compression | Autoencoders Demo",
+    page_icon="🗜️",
+    layout="wide",
 )
 
-# Header
-render_header(
-    'Image compression with autoencoders',
-    'Explore how autoencoders can compress images while maintaining quality'
-)
+# ── Project imports ───────────────────────────────────────────────────────────
+project_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(project_root))
 
-# Explanation
-render_explanation_expander(
-    'How does compression work?',
-    """
-    An autoencoder compresses images by:
-    
-    1. **Encoding**: The encoder network reduces the 64x64x3 (12,288) image to a smaller latent vector
-    2. **Bottleneck**: Information is forced through this compressed representation
-    3. **Decoding**: The decoder reconstructs the image from the latent vector
-    
-    **Compression Ratio**: Original size / Latent size
-    - Latent 32: ~384x compression (12,288 / 32)
-    - Latent 64: ~192x compression
-    - Latent 128: ~96x compression
-    - Latent 256: ~48x compression
-    
-    **Trade-off**: Higher compression = more information loss = lower quality
-    
-    **Quality Metrics**:
-    - **MSE** (Mean Squared Error): Lower means the reconstruction matches the original
-    - **Compression Ratio**: Higher ratios save more space but typically increase error
-    """
-)
+from dotenv import load_dotenv
+load_dotenv(project_root / ".env")
 
-st.markdown('---')
 
-# Model selection
-st.sidebar.markdown('## Configuration')
+# ── Model loader (cached) ─────────────────────────────────────────────────────
+@st.cache_resource(show_spinner="Loading compression model…")
+def load_model():
+    """Download model from HuggingFace (cached after first load)."""
+    import tensorflow as tf
+    from tensorflow import keras
+    from huggingface_hub import hf_hub_download
 
-latent_dims = [32, 64, 128, 256]
-selected_latent = st.sidebar.selectbox(
-    'Select Compression Level:',
-    latent_dims,
-    index=2,  # Default to 128
-    format_func=lambda x: f'Latent {x} ({12288/x:.1f}x compression)'
-)
+    hf_repo_id = os.getenv("HF_REPO_ID", "gperdrizet/autoencoders")
+    hf_token   = os.getenv("HF_TOKEN", None)
+    model_name = "compression_ae_latent128.keras"
 
-size_reduction_pct = 100 * (1 - selected_latent / 12288)
+    # Try local model first
+    local_path = project_root / "models" / model_name
+    if local_path.exists():
+        return keras.models.load_model(str(local_path))
+
+    # Download from HuggingFace
+    try:
+        model_path = hf_hub_download(
+            repo_id=hf_repo_id,
+            filename=f"models/{model_name}",
+            repo_type="model",
+            token=hf_token,
+        )
+        return keras.models.load_model(model_path)
+    except Exception as e:
+        st.error(f"Could not load model: {e}")
+        return None
+
+
+def preprocess_image(img: Image.Image, size: int = 128) -> np.ndarray:
+    """Resize and normalise a PIL image to a (1, size, size, 3) float32 array."""
+    img = img.convert("RGB").resize((size, size), Image.LANCZOS)
+    arr = np.array(img, dtype=np.float32) / 255.0
+    return arr[np.newaxis]  # add batch dimension
+
+
+def postprocess(arr: np.ndarray) -> Image.Image:
+    """Convert a (1, H, W, 3) float32 array back to a PIL Image."""
+    arr = np.clip(arr[0], 0, 1)
+    return Image.fromarray((arr * 255).astype(np.uint8))
+
+
+def image_to_bytes(img: Image.Image, fmt: str = "PNG") -> bytes:
+    buf = io.BytesIO()
+    img.save(buf, format=fmt)
+    return buf.getvalue()
+
+
+# ── PSNR helper (no skimage dependency in demo) ───────────────────────────────
+def psnr(orig: np.ndarray, recon: np.ndarray) -> float:
+    mse = np.mean((orig - recon) ** 2)
+    if mse == 0:
+        return float("inf")
+    return float(10 * np.log10(1.0 / mse))
+
+
+# ── UI ────────────────────────────────────────────────────────────────────────
+st.title("🗜️ Image Compression with Autoencoders")
+
+st.markdown("""
+An autoencoder compresses your image into **128 numbers** (from 49,152), then
+reconstructs it. That's a **384× compression ratio** — all learned automatically
+from training data, no hand-crafted rules.
+""")
+
+st.divider()
+
+# Sidebar controls
+with st.sidebar:
+    st.header("⚙️ Settings")
+    st.markdown("**Compression**")
+    st.metric("Latent dimension", "128")
+    st.metric("Compression ratio", "384×")
+    st.metric("Input size", "49,152 values")
+    st.metric("Compressed size", "128 values")
+    st.divider()
+    st.markdown("**Model**")
+    st.caption("Pre-trained on DF2K_OST (900 images @ 128×128)")
+    st.caption("Convolutional AE with 4 encoder/decoder blocks")
 
 # Load model
-@st.cache_resource
-def load_compression_model(latent_dim):
-    model_name = f'compression_ae_latent{latent_dim}.keras'
-    model_path = MODELS_DIR / model_name
-    if not model_path.exists():
-        st.error(f'Model file not found: {model_name}')
-        st.info('Train the model locally or add it to the models directory.')
-        st.stop()
-    return load_model(str(model_path))
+model = load_model()
 
-with show_loading_message(f'Loading compression model (latent {selected_latent})...'):
-    model = load_compression_model(selected_latent)
+if model is None:
+    st.error("⚠️ Model unavailable. Make sure the model is trained and available.")
+    st.stop()
 
-# Show model info in sidebar
-render_model_info_sidebar(model, f'Compression AE (Latent {selected_latent})')
+# ── Image input ───────────────────────────────────────────────────────────────
+st.subheader("Upload an Image")
 
-# Load dataset
-@st.cache_data
-def load_dataset():
-    (x_train, y_train), (x_test, y_test) = load_coco(subset_percent=10, normalize=True)
-    return x_test, y_test
+col_upload, col_sample = st.columns([2, 1])
 
-x_test, y_test = load_dataset()
-
-# Main content
-st.markdown('## Select an image')
-
-# Tabs for different input methods
-tab1, tab2 = st.tabs(['From dataset', 'Upload your own'])
-
-with tab1:
-    selected_image, selected_label, selected_idx = render_sample_selector(
-        x_test, y_test, COCO_CLASSES, key='compression'
+with col_upload:
+    uploaded = st.file_uploader(
+        "Choose an image file",
+        type=["jpg", "jpeg", "png", "webp"],
+        label_visibility="collapsed",
     )
-    input_image = selected_image
 
-with tab2:
-    uploaded_file = render_image_uploader(key='compression_upload')
-    if uploaded_file is not None:
-        from src.data_utils import upload_and_preprocess
-        input_image = upload_and_preprocess(uploaded_file)[0]
+with col_sample:
+    st.markdown("**Or use a sample image:**")
+    sample_choice = st.selectbox(
+        "Sample images",
+        ["None", "Sample from training set"],
+        label_visibility="collapsed",
+    )
+
+# Determine source image
+source_img = None
+
+if uploaded is not None:
+    source_img = Image.open(uploaded)
+elif sample_choice != "None":
+    # Load a sample from the cached dataset
+    from src.data_utils import load_df2k_ost
+    with st.spinner("Loading sample image…"):
+        try:
+            images = load_df2k_ost(
+                image_size=128,
+                max_images=5,
+                cache_dir=project_root / "data" / "df2k_ost_128",
+            )
+            source_img = Image.fromarray((images[0] * 255).astype(np.uint8))
+        except Exception as e:
+            st.warning(f"Could not load sample image: {e}")
+
+# ── Compression & display ─────────────────────────────────────────────────────
+if source_img is not None:
+    st.divider()
+
+    input_arr = preprocess_image(source_img)
+    with st.spinner("Compressing…"):
+        reconstructed_arr = model.predict(input_arr, verbose=0)
+
+    recon_img   = postprocess(reconstructed_arr)
+    score_psnr  = psnr(input_arr, reconstructed_arr)
+
+    # ── Side-by-side images ────────────────────────────────────────────────
+    col_orig, col_recon = st.columns(2)
+
+    with col_orig:
+        st.subheader("Original (resized to 128×128)")
+        st.image(source_img.resize((384, 384), Image.NEAREST), use_container_width=True)
+        orig_bytes = image_to_bytes(source_img.resize((128, 128), Image.LANCZOS))
+        st.download_button("⬇️ Download original", orig_bytes, "original.png", "image/png")
+
+    with col_recon:
+        st.subheader("Reconstructed (from 128 numbers)")
+        st.image(recon_img.resize((384, 384), Image.NEAREST), use_container_width=True)
+        recon_bytes = image_to_bytes(recon_img)
+        st.download_button("⬇️ Download reconstructed", recon_bytes, "reconstructed.png", "image/png")
+
+    # ── Metrics ────────────────────────────────────────────────────────────
+    st.subheader("Quality Metrics")
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("PSNR", f"{score_psnr:.1f} dB",  help="Peak Signal-to-Noise Ratio. Higher is better. >30 dB is excellent.")
+    m2.metric("Compression Ratio", "384×",      help="Input values / latent values = 49,152 / 128")
+    m3.metric("Input values", "49,152",         help="128 × 128 × 3 pixel values")
+    m4.metric("Latent values", "128",           help="The entire image encoded as 128 floating-point numbers")
+
+    # Quality interpretation
+    if score_psnr >= 35:
+        st.success(f"✅ Excellent quality ({score_psnr:.1f} dB) — very hard to see differences at this compression.")
+    elif score_psnr >= 30:
+        st.success(f"✅ Good quality ({score_psnr:.1f} dB) — minor artefacts at this extreme compression ratio.")
+    elif score_psnr >= 25:
+        st.warning(f"⚠️ Fair quality ({score_psnr:.1f} dB) — noticeable blurring, but structure is preserved.")
     else:
-        st.info('Upload an image to see compression results')
-        input_image = None
+        st.error(f"❌ Low quality ({score_psnr:.1f} dB) — significant loss at this compression.")
 
-# Process and display results
-if input_image is not None:
-    st.markdown('---')
-    st.markdown('## Compression results')
-    
-    # Prepare for prediction
-    input_batch = np.expand_dims(input_image, axis=0) if len(input_image.shape) == 3 else input_image.reshape(1, 32, 32, 3)
-    
-    # Reconstruct
-    with show_loading_message('Compressing and reconstructing...'):
-        reconstructed = model.predict(input_batch, verbose=0)[0]
-    
-    # Calculate metrics
-    metrics = compute_metrics_summary(
-        input_batch,
-        np.expand_dims(reconstructed, axis=0),
-        selected_latent
-    )
-    
-    # Display metrics
-    st.markdown('### Quality metrics')
-    render_metrics_display({
-        'Compression Ratio': f'{metrics["compression_ratio"]:.1f}x',
-        'MSE': f'{metrics["mse"]:.6f}',
-        'Size Reduction': f'{size_reduction_pct:.1f}%'
-    }, columns=3)
-    
-    st.markdown('---')
-    
-    # Visualization options
-    viz_mode = st.radio(
-        'Visualization Mode:',
-        ['Side-by-Side', 'Difference Heatmap'],
-        horizontal=True
-    )
-    
-    if viz_mode == 'Side-by-Side':
-        fig = create_plotly_comparison(
-            input_image if len(input_image.shape) == 3 else input_batch[0],
-            reconstructed,
-            title=f'Compression with Latent Dimension {selected_latent}'
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        fig = create_plotly_heatmap(
-            input_image if len(input_image.shape) == 3 else input_batch[0],
-            reconstructed
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Download buttons
-    st.markdown('### Download results')
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        create_download_button(
-            input_image if len(input_image.shape) == 3 else input_batch[0],
-            filename=f'original_{selected_idx}.png',
-            button_text='Download Original'
-        )
-    
-    with col2:
-        create_download_button(
-            reconstructed,
-            filename=f'compressed_latent{selected_latent}_{selected_idx}.png',
-            button_text='Download Reconstructed'
-        )
-    
-    # Additional analysis
-    with st.expander('Detailed analysis'):
-        st.markdown(f"""
-        **Compression Details:**
-        - Original size: 12,288 values (64 x 64 x 3)
-        - Latent size: {selected_latent} values
-        - Size reduction: {size_reduction_pct:.1f}%
-        
-        **Quality Assessment:**
-        - Compression ratio of {metrics['compression_ratio']:.1f}x keeps only {100/metrics['compression_ratio']:.1f}% of the original values
-        - MSE of {metrics['mse']:.6f} indicates {'low' if metrics['mse'] < 0.01 else 'moderate' if metrics['mse'] < 0.02 else 'high'} reconstruction error
-        
-        **Trade-offs:**
-        - Lower latent dimensions = higher compression but lower quality
-        - Higher latent dimensions = lower compression but better quality
-        - For this image, latent {selected_latent} provides a {['very aggressive', 'aggressive', 'balanced', 'conservative'][latent_dims.index(selected_latent)]} compression
+    # ── Pixel difference ───────────────────────────────────────────────────
+    with st.expander("🔍 Pixel Difference Map"):
+        import matplotlib.pyplot as plt
+
+        orig_arr  = input_arr[0]
+        diff      = np.abs(orig_arr - reconstructed_arr[0])
+        diff_norm = (diff / diff.max() * 255).astype(np.uint8) if diff.max() > 0 else diff.astype(np.uint8)
+
+        fig, axes = plt.subplots(1, 3, figsize=(12, 4))
+        axes[0].imshow(orig_arr)
+        axes[0].set_title("Original")
+        axes[0].axis("off")
+
+        axes[1].imshow(reconstructed_arr[0])
+        axes[1].set_title("Reconstructed")
+        axes[1].axis("off")
+
+        im = axes[2].imshow(diff.mean(axis=2), cmap="hot", vmin=0)
+        axes[2].set_title("Absolute Difference (mean over channels)")
+        axes[2].axis("off")
+        fig.colorbar(im, ax=axes[2], fraction=0.046)
+
+        st.pyplot(fig)
+        plt.close(fig)
+
+else:
+    # Placeholder
+    st.info("👆 Upload an image or select a sample to see compression in action.")
+
+    with st.expander("How does it work?"):
+        st.markdown("""
+**1. Encoder** (compression):
+The encoder passes the image through 4 convolutional layers, each halving the spatial
+dimensions: 128→64→32→16→8. A final Dense layer compresses the 8×8×512 feature map
+into just **128 numbers**.
+
+**2. Latent space** (the bottleneck):
+These 128 numbers encode the entire image. The network was forced to decide what to keep
+and what to discard — learning that edges, textures, and colours matter; exact pixel
+values don't.
+
+**3. Decoder** (reconstruction):
+The decoder uses transposed convolutions to rebuild the image from those 128 numbers,
+producing a visually similar 128×128×3 output.
         """)
-
-# Comparison section
-st.markdown('---')
-st.markdown('## Compare compression levels')
-
-if st.button('Generate Comparison Across All Latent Dimensions'):
-    # Use currently selected image
-    if input_image is not None:
-        input_batch = np.expand_dims(input_image, axis=0) if len(input_image.shape) == 3 else input_image.reshape(1, 32, 32, 3)
-        
-        cols = st.columns(len(latent_dims) + 1)
-        
-        # Original
-        with cols[0]:
-            st.image(input_image if len(input_image.shape) == 3 else input_batch[0], 
-                    caption='Original', use_container_width=True)
-            st.metric('Latent Dim', 'N/A')
-            st.metric('MSE', '0.0000')
-        
-        # Each latent dimension
-        for idx, latent_dim in enumerate(latent_dims, start=1):
-            with show_loading_message(f'Processing latent {latent_dim}...'):
-                model_comp = load_compression_model(latent_dim)
-                reconstructed_comp = model_comp.predict(input_batch, verbose=0)[0]
-                metrics_comp = compute_metrics_summary(input_batch, np.expand_dims(reconstructed_comp, axis=0), latent_dim)
-            
-            with cols[idx]:
-                st.image(reconstructed_comp, 
-                        caption=f'Latent {latent_dim}', use_container_width=True)
-                st.metric('Compression', f'{metrics_comp["compression_ratio"]:.1f}x')
-                st.metric('MSE', f'{metrics_comp["mse"]:.4f}')
-    else:
-        st.warning('Please select or upload an image first!')
-
-# Educational content
-st.markdown('---')
-with st.expander('Tips for best results'):
-    st.markdown("""
-    **When to use different compression levels:**
-    
-    - **Latent 32** (Highest compression):
-        - Maximum size reduction
-        - Acceptable for thumbnails or previews
-        - Best for simple images with low detail
-    
-    - **Latent 64**:
-        - High compression with moderate quality
-        - Good balance for web thumbnails
-        - Works well for most images
-    
-    - **Latent 128** (Recommended):
-        - Balanced compression and quality
-        - Excellent for general use
-        - Good quality retention for most images
-    
-    - **Latent 256** (Lowest compression):
-        - Maximum quality preservation
-        - Lower compression ratio
-        - Best for detailed or important images
-    
-    **Understanding the Metrics:**
-
-    - **Compression Ratio**: Higher ratios save more space but tend to introduce blur/artifacts. Anything above ~200x is extremely lossy.
-    - **MSE < 0.010**: High fidelity reconstruction with minor differences. 0.01-0.02 is acceptable for many use cases, while >0.02 indicates visible degradation.
-    """)
-
-# Sidebar additional info
-with st.sidebar:
-    st.markdown('---')
-    st.markdown('## Current settings')
-    st.info(f"""
-    **Latent Dimension**: {selected_latent}
-    
-    **Compression Ratio**: {12288/selected_latent:.1f}x
-    
-    **Size Reduction**: {100 * (1 - selected_latent/12288):.1f}%
-    """)

@@ -4,7 +4,6 @@
 # Deep Learning Framework
 tensorflow>=2.13.0
 keras>=2.13.0
-tensorflow-datasets>=4.9.0
 
 # Data Science
 numpy>=1.24.0
