@@ -49,10 +49,10 @@ def load_df2k_ost(split='train', max_images=None):
         
         images = np.array(images)
         
-        print(f"\n✓ Loaded {len(images)} images")
-        print(f"  Shape: {images.shape}")
-        print(f"  Data type: {images.dtype}")
-        print(f"  Value range: [{images.min():.3f}, {images.max():.3f}]")
+        print(f"Loaded {len(images)} images")
+        print(f"Shape: {images.shape}")
+        print(f"Data type: {images.dtype}")
+        print(f"Value range: [{images.min():.3f}, {images.max():.3f}]")
         
         return images
         
