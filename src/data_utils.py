@@ -174,8 +174,10 @@ def create_tf_dataset(split='train', batch_size=16, shuffle=True, val_split=0.1,
         )
     )
     
+    train_dataset = train_dataset.repeat()  # Repeat indefinitely for multiple epochs
+    
     if shuffle:
-        train_dataset = train_dataset.shuffle(buffer_size=1024, seed=seed)
+        train_dataset = train_dataset.shuffle(buffer_size=256, seed=seed)
     
     train_dataset = train_dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
     
@@ -188,7 +190,7 @@ def create_tf_dataset(split='train', batch_size=16, shuffle=True, val_split=0.1,
                 tf.TensorSpec(shape=(256, 256, 3), dtype=tf.float32)
             )
         )
-        val_dataset = val_dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+        val_dataset = val_dataset.repeat().batch(batch_size).prefetch(tf.data.AUTOTUNE)
     else:
         val_dataset = None
     
@@ -263,8 +265,10 @@ def create_denoising_tf_dataset(split='train', batch_size=16, noise_level=25,
         )
     )
     
+    train_dataset = train_dataset.repeat()  # Repeat indefinitely for multiple epochs
+    
     if shuffle:
-        train_dataset = train_dataset.shuffle(buffer_size=1024, seed=seed)
+        train_dataset = train_dataset.shuffle(buffer_size=256, seed=seed)
     
     train_dataset = train_dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
     
@@ -277,7 +281,7 @@ def create_denoising_tf_dataset(split='train', batch_size=16, noise_level=25,
                 tf.TensorSpec(shape=(256, 256, 3), dtype=tf.float32)
             )
         )
-        val_dataset = val_dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+        val_dataset = val_dataset.repeat().batch(batch_size).prefetch(tf.data.AUTOTUNE)
     else:
         val_dataset = None
     
