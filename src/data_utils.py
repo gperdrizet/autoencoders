@@ -8,6 +8,7 @@ import numpy as np
 from PIL import Image
 from datasets import load_dataset
 from tqdm import tqdm
+import tensorflow as tf
 
 
 # HuggingFace dataset configuration (hardcoded)
@@ -112,3 +113,179 @@ def add_gaussian_noise(images, noise_level=25):
     noise = np.random.normal(0, noise_std, images.shape).astype(np.float32)
     noisy_images = images + noise
     return np.clip(noisy_images, 0, 1)
+
+
+def create_tf_dataset(split='train', batch_size=16, shuffle=True, val_split=0.1, seed=42):
+    """
+    Create TensorFlow dataset that loads images on-the-fly (memory efficient).
+    
+    This function loads images in batches directly from HuggingFace without
+    loading the entire dataset into memory first.
+    
+    Args:
+        split: 'train' or 'validation'
+        batch_size: Batch size for training
+        shuffle: Whether to shuffle the dataset
+        val_split: Fraction for validation split (only used if split='train')
+        seed: Random seed for reproducibility
+    
+    Returns:
+        (train_dataset, val_dataset, dataset_info) where dataset_info contains sizes
+    """
+    print(f"Creating TensorFlow dataset from {DATASET_REPO_ID} (split={split})")
+    
+    # Load HuggingFace dataset (lazy-loaded, no memory overhead)
+    hf_dataset = load_dataset(DATASET_REPO_ID, split=split)
+    total_size = len(hf_dataset)
+    
+    print(f"Total images: {total_size}")
+    
+    # Split into train/val
+    if val_split > 0:
+        split_idx = int(total_size * (1 - val_split))
+        
+        # Shuffle indices for split
+        indices = np.random.RandomState(seed).permutation(total_size)
+        train_indices = indices[:split_idx]
+        val_indices = indices[split_idx:]
+        
+        train_hf = hf_dataset.select(train_indices)
+        val_hf = hf_dataset.select(val_indices)
+        
+        print(f"Split: {len(train_hf)} train, {len(val_hf)} validation")
+    else:
+        train_hf = hf_dataset
+        val_hf = None
+        print(f"No split: {len(train_hf)} images")
+    
+    def image_generator(hf_dataset):
+        """Generator that yields (image, image) pairs for autoencoder training."""
+        for sample in hf_dataset:
+            img = sample['image']  # PIL Image
+            img_array = np.array(img, dtype=np.float32) / 255.0
+            yield img_array, img_array
+    
+    # Create train dataset
+    train_dataset = tf.data.Dataset.from_generator(
+        lambda: image_generator(train_hf),
+        output_signature=(
+            tf.TensorSpec(shape=(256, 256, 3), dtype=tf.float32),
+            tf.TensorSpec(shape=(256, 256, 3), dtype=tf.float32)
+        )
+    )
+    
+    if shuffle:
+        train_dataset = train_dataset.shuffle(buffer_size=1024, seed=seed)
+    
+    train_dataset = train_dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    
+    # Create validation dataset
+    if val_hf is not None:
+        val_dataset = tf.data.Dataset.from_generator(
+            lambda: image_generator(val_hf),
+            output_signature=(
+                tf.TensorSpec(shape=(256, 256, 3), dtype=tf.float32),
+                tf.TensorSpec(shape=(256, 256, 3), dtype=tf.float32)
+            )
+        )
+        val_dataset = val_dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    else:
+        val_dataset = None
+    
+    dataset_info = {
+        'train_size': len(train_hf),
+        'val_size': len(val_hf) if val_hf else 0,
+        'total_size': total_size
+    }
+    
+    return train_dataset, val_dataset, dataset_info
+
+
+def create_denoising_tf_dataset(split='train', batch_size=16, noise_level=25, 
+                                shuffle=True, val_split=0.1, seed=42):
+    """
+    Create TensorFlow dataset for denoising (loads images on-the-fly with noise).
+    
+    Args:
+        split: 'train' or 'validation'
+        batch_size: Batch size for training
+        noise_level: Gaussian noise sigma (0-255 scale)
+        shuffle: Whether to shuffle the dataset
+        val_split: Fraction for validation split
+        seed: Random seed for reproducibility
+    
+    Returns:
+        (train_dataset, val_dataset, dataset_info)
+    """
+    print(f"Creating denoising dataset from {DATASET_REPO_ID} (split={split})")
+    
+    hf_dataset = load_dataset(DATASET_REPO_ID, split=split)
+    total_size = len(hf_dataset)
+    
+    print(f"Total images: {total_size}")
+    print(f"Noise level: σ={noise_level}")
+    
+    # Split into train/val
+    if val_split > 0:
+        split_idx = int(total_size * (1 - val_split))
+        indices = np.random.RandomState(seed).permutation(total_size)
+        train_indices = indices[:split_idx]
+        val_indices = indices[split_idx:]
+        
+        train_hf = hf_dataset.select(train_indices)
+        val_hf = hf_dataset.select(val_indices)
+        
+        print(f"Split: {len(train_hf)} train, {len(val_hf)} validation")
+    else:
+        train_hf = hf_dataset
+        val_hf = None
+    
+    noise_std = noise_level / 255.0
+    
+    def denoising_generator(hf_dataset, noise_std):
+        """Generator that yields (noisy_image, clean_image) pairs."""
+        for sample in hf_dataset:
+            img = sample['image']
+            clean = np.array(img, dtype=np.float32) / 255.0
+            
+            # Add noise
+            noise = np.random.normal(0, noise_std, clean.shape).astype(np.float32)
+            noisy = np.clip(clean + noise, 0, 1)
+            
+            yield noisy, clean
+    
+    # Create train dataset
+    train_dataset = tf.data.Dataset.from_generator(
+        lambda: denoising_generator(train_hf, noise_std),
+        output_signature=(
+            tf.TensorSpec(shape=(256, 256, 3), dtype=tf.float32),
+            tf.TensorSpec(shape=(256, 256, 3), dtype=tf.float32)
+        )
+    )
+    
+    if shuffle:
+        train_dataset = train_dataset.shuffle(buffer_size=1024, seed=seed)
+    
+    train_dataset = train_dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    
+    # Create validation dataset
+    if val_hf is not None:
+        val_dataset = tf.data.Dataset.from_generator(
+            lambda: denoising_generator(val_hf, noise_std),
+            output_signature=(
+                tf.TensorSpec(shape=(256, 256, 3), dtype=tf.float32),
+                tf.TensorSpec(shape=(256, 256, 3), dtype=tf.float32)
+            )
+        )
+        val_dataset = val_dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    else:
+        val_dataset = None
+    
+    dataset_info = {
+        'train_size': len(train_hf),
+        'val_size': len(val_hf) if val_hf else 0,
+        'total_size': total_size
+    }
+    
+    return train_dataset, val_dataset, dataset_info
+
