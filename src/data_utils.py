@@ -58,7 +58,7 @@ def load_df2k_ost(split='train', max_images=None):
         return images
         
     except Exception as e:
-        print(f"\n❌ Error loading dataset: {e}")
+        print(f"\nError loading dataset: {e}")
         print(f"\nMake sure the dataset exists at: https://huggingface.co/datasets/{DATASET_REPO_ID}")
         raise
     print(f"  Data type: {images.dtype}")

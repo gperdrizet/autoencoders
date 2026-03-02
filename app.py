@@ -1,5 +1,5 @@
 """
-Autoencoders Demo — Main Landing Page
+Autoencoders Demo - Main Landing Page
 """
 
 import streamlit as st
@@ -13,7 +13,7 @@ st.set_page_config(
 
 # ── Page Header ─────────────────────────────────────────────────────────
 st.title("Autoencoders: Learning to Compress Reality")
-st.markdown("*An interactive survey of what autoencoders can do — for bootcamp students*")
+st.markdown("*An interactive survey of what autoencoders can do - for bootcamp students*")
 
 st.divider()
 
@@ -38,7 +38,7 @@ The magic happens in the **latent space** (bottleneck):
 - This forces the model to understand the structure of the data
 
 Unlike traditional compression (JPEG, ZIP), an autoencoder **learns its own rules**
-from the data — no hand-crafted algorithms required.
+from the data - no hand-crafted algorithms required.
     """)
 
 with col2:
@@ -53,7 +53,7 @@ Autoencoders are a foundational concept that powers:
 | Generation (VAE) | The distribution of data |
 | Representation Learning | Meaningful features without labels |
 
-The same core idea — compress then reconstruct — applies across **images, audio,
+The same core idea - compress then reconstruct - applies across **images, audio,
 time series, text**, and more.
     """)
 
@@ -66,7 +66,7 @@ st.markdown("Select a demo from the sidebar, or click a card below:")
 card1, card2 = st.columns(2)
 
 with card1:
-    st.subheader("🗜️ Image Compression")
+    st.subheader(" Image Compression")
     st.markdown("""
 **384× compression ratio** using a 128-dimensional latent space.
 
@@ -77,10 +77,10 @@ reconstruct it. Compare quality against standard JPEG.
 - **Dataset**: DF2K_OST high-quality images
 - **Latent dim**: 128 values from 49,152 inputs
     """)
-    st.page_link("pages/01-compression.py", label="Try Compression Demo →", icon="🗜️")
+    st.page_link("pages/01-compression.py", label="Try Compression Demo →", icon="")
 
 with card2:
-    st.subheader("🔇 Image Denoising")
+    st.subheader(" Image Denoising")
     st.markdown("""
 **Trained to remove Gaussian noise** (σ=25) from corrupted images.
 
@@ -91,7 +91,7 @@ what clean images look like and pushes noisy inputs toward that space.
 - **Noise level**: σ=25 Gaussian
 - **Metric**: PSNR improvement in dB
     """)
-    st.page_link("pages/02-denoising.py", label="Try Denoising Demo →", icon="🔇")
+    st.page_link("pages/02-denoising.py", label="Try Denoising Demo →", icon="")
 
 st.divider()
 
@@ -127,7 +127,7 @@ with st.expander("Dataset Information", expanded=False):
 - **Source**: Combined dataset from DIV2K, Flickr2K, and OST
 - **Processing**: Resized to 256×256 using Lanczos resampling
 - **Size**: ~13,874 images (~90/10 train/validation split)
-- **Hosted**: [HuggingFace — gperdrizet/DF2K_OST](https://huggingface.co/datasets/gperdrizet/DF2K_OST)
+- **Hosted**: [HuggingFace - gperdrizet/DF2K_OST](https://huggingface.co/datasets/gperdrizet/DF2K_OST)
     """)
 
 # ── Footer ────────────────────────────────────────────────────────────────────

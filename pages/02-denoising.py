@@ -14,7 +14,7 @@ from PIL import Image
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Image Denoising | Autoencoders Demo",
-    page_icon="🔇",
+    page_icon="",
     layout="wide",
 )
 
@@ -83,11 +83,11 @@ def psnr(orig: np.ndarray, recon: np.ndarray) -> float:
 
 
 # ── UI ────────────────────────────────────────────────────────────────────────
-st.title("🔇 Image Denoising with Autoencoders")
+st.title(" Image Denoising with Autoencoders")
 
 st.markdown("""
 A denoising autoencoder is trained on **pairs of (noisy, clean)** images.
-It learns to push corrupted inputs back toward the manifold of clean images —
+It learns to push corrupted inputs back toward the manifold of clean images -
 effectively learning what noise looks like and how to remove it.
 """)
 
@@ -95,7 +95,7 @@ st.divider()
 
 # Sidebar
 with st.sidebar:
-    st.header("⚙️ Settings")
+    st.header(" Settings")
     noise_level = st.slider(
         "Noise level (σ)",
         min_value=5,
@@ -106,18 +106,18 @@ with st.sidebar:
     )
     if noise_level != 25:
         st.info(
-            f"ℹ️ Model was trained at σ=25. "
+            f" Model was trained at σ=25. "
             f"At σ={noise_level} you may see {'better' if noise_level < 25 else 'worse'} results."
         )
     st.divider()
     st.markdown("**Model**")
-    st.caption("Denoising AE — latent dim 256")
+    st.caption("Denoising AE - latent dim 256")
     st.caption("Trained on DF2K_OST, σ=25 Gaussian noise")
 
 # Load model
 model = load_model()
 if model is None:
-    st.error("⚠️ Model unavailable.")
+    st.error("Model unavailable.")
     st.stop()
 
 # ── Image input ───────────────────────────────────────────────────────────────
@@ -186,12 +186,12 @@ if source_img is not None:
     with col2:
         st.subheader(f"Noisy (σ={noise_level})")
         st.image(noisy_img.resize(display_size, Image.NEAREST), use_container_width=True)
-        st.caption(f"After adding Gaussian noise — PSNR: {psnr_noisy:.1f} dB")
+        st.caption(f"After adding Gaussian noise - PSNR: {psnr_noisy:.1f} dB")
 
     with col3:
         st.subheader("Denoised")
         st.image(denoised_img.resize(display_size, Image.NEAREST), use_container_width=True)
-        st.caption(f"After autoencoder denoising — PSNR: {psnr_denoised:.1f} dB")
+        st.caption(f"After autoencoder denoising - PSNR: {psnr_denoised:.1f} dB")
 
     # ── Metrics ────────────────────────────────────────────────────────────
     st.subheader("Quality Metrics")
@@ -202,16 +202,16 @@ if source_img is not None:
     m3.metric("Improvement",   f"+{improvement:.1f} dB",  help="PSNR gained by denoising")
 
     if psnr_denoised >= 30:
-        st.success(f"✅ Excellent denoising result ({psnr_denoised:.1f} dB)!")
+        st.success(f"Excellent denoising result ({psnr_denoised:.1f} dB)!")
     elif psnr_denoised >= 28:
-        st.success(f"✅ Good denoising result ({psnr_denoised:.1f} dB — above target of 28 dB)")
+        st.success(f"Good denoising result ({psnr_denoised:.1f} dB - above target of 28 dB)")
     elif psnr_denoised >= 25:
-        st.warning(f"⚠️ Fair result ({psnr_denoised:.1f} dB). Model was trained at σ=25 — try that noise level.")
+        st.warning(f"Fair result ({psnr_denoised:.1f} dB). Model was trained at σ=25 - try that noise level.")
     else:
-        st.error(f"❌ Poor result ({psnr_denoised:.1f} dB). Very high noise levels exceed the model's training range.")
+        st.error(f"Poor result ({psnr_denoised:.1f} dB). Very high noise levels exceed the model's training range.")
 
     # ── Noise level comparison chart ───────────────────────────────────────
-    with st.expander("📊 Performance across noise levels"):
+    with st.expander(" Performance across noise levels"):
         import matplotlib.pyplot as plt
 
         test_arr = preprocess_image(source_img)
@@ -240,7 +240,7 @@ if source_img is not None:
 
     # ── Download ───────────────────────────────────────────────────────────
     st.download_button(
-        "⬇️ Download denoised image",
+        " Download denoised image",
         image_to_bytes(denoised_img),
         "denoised.png",
         "image/png",
@@ -260,10 +260,10 @@ it tries to reconstruct the clean image from the noisy input. Over time it learn
 **Inference:**
 When given a new noisy image, the encoder maps it into the latent space. Because
 the latent space was shaped by **clean** images during training, the decoder
-produces a cleaner reconstruction — noise doesn't project cleanly onto the learned manifold.
+produces a cleaner reconstruction - noise doesn't project cleanly onto the learned manifold.
 
 **Why does it work beyond σ=25?**
 The model generalises somewhat, but performance degrades for noise levels far outside
-its training distribution. This is a feature, not a bug — it shows the model
+its training distribution. This is a feature, not a bug - it shows the model
 learned something meaningful, not just memorisation.
         """)

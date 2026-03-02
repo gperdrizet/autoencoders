@@ -4,13 +4,13 @@ Interactive demonstrations of autoencoder applications for AI/ML bootcamp studen
 
 ## Overview
 
-This repository is a **survey of autoencoder applications** — the goal is to show
+This repository is a **survey of autoencoder applications** - the goal is to show
 *what autoencoders can do*, not to dive deep into implementation details.
 
 Two demonstrations focusing on image processing:
 
-1. **Image compression** — Compress 256×256 images to 512 numbers (384× ratio) using a convolutional AE trained on DF2K_OST high-quality photographs
-2. **Image denoising** — Remove Gaussian noise from images; the AE learns the manifold of clean images and pushes noisy inputs back onto it
+1. **Image compression** - Compress 256×256 images to 512 numbers (384× ratio) using a convolutional AE trained on DF2K_OST high-quality photographs
+2. **Image denoising** - Remove Gaussian noise from images; the AE learns the manifold of clean images and pushes noisy inputs back onto it
 
 Each demo includes:
 - **Training notebooks** - Step-by-step training with detailed explanations

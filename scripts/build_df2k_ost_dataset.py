@@ -118,7 +118,7 @@ def collect_all_images():
     
     for source_name, source_dir in SOURCES.items():
         if not source_dir.exists():
-            print(f"⚠️  {source_name} directory not found: {source_dir}")
+            print(f" {source_name} directory not found: {source_dir}")
             continue
         
         print(f"\n{source_name}:")
@@ -133,7 +133,7 @@ def collect_all_images():
                 'source': source_name
             })
     
-    print(f"\n📊 Total images found: {len(all_images)}")
+    print(f"\n Total images found: {len(all_images)}")
     return all_images
 
 
@@ -190,8 +190,8 @@ def process_and_split_dataset(image_list, train_split=0.9):
                 'filename': img_info['path'].name
             })
     
-    print(f"\n✅ Processed {len(train_data)} training images")
-    print(f"✅ Processed {len(val_data)} validation images")
+    print(f"\nProcessed {len(train_data)} training images")
+    print(f"Processed {len(val_data)} validation images")
     
     return train_data, val_data
 
@@ -225,7 +225,7 @@ def create_huggingface_dataset(train_data, val_data):
         'validation': val_dataset
     })
     
-    print(f"✅ Created dataset with {len(train_dataset)} train / {len(val_dataset)} validation images")
+    print(f"Created dataset with {len(train_dataset)} train / {len(val_dataset)} validation images")
     
     return dataset_dict
 
@@ -356,7 +356,7 @@ def upload_to_huggingface(dataset_dict):
     print("=" * 70)
     
     if not HF_TOKEN:
-        print("❌ Error: HF_TOKEN not found in environment variables")
+        print("Error: HF_TOKEN not found in environment variables")
         print("Please set HF_TOKEN in .env file")
         return False
     
@@ -385,11 +385,11 @@ def upload_to_huggingface(dataset_dict):
             token=HF_TOKEN
         )
         
-        print(f"\n✅ Dataset successfully uploaded to: https://huggingface.co/datasets/{REPO_ID}")
+        print(f"\nDataset successfully uploaded to: https://huggingface.co/datasets/{REPO_ID}")
         return True
         
     except Exception as e:
-        print(f"\n❌ Error uploading dataset: {e}")
+        print(f"\nError uploading dataset: {e}")
         return False
 
 
@@ -407,14 +407,14 @@ def main():
     image_list = collect_all_images()
     
     if len(image_list) == 0:
-        print("\n❌ No images found! Check raw data directories.")
+        print("\nNo images found! Check raw data directories.")
         sys.exit(1)
     
     # Step 2: Process and split
     train_data, val_data = process_and_split_dataset(image_list, TRAIN_SPLIT)
     
     if len(train_data) == 0 or len(val_data) == 0:
-        print("\n❌ No images were successfully processed!")
+        print("\nNo images were successfully processed!")
         sys.exit(1)
     
     # Step 3: Create HuggingFace dataset
@@ -425,13 +425,13 @@ def main():
     
     if success:
         print("\n" + "=" * 70)
-        print("✅ DATASET CREATION COMPLETE")
+        print("DATASET CREATION COMPLETE")
         print("=" * 70)
         print("\nThis script can now be safely deleted.")
         print(f"Dataset available at: https://huggingface.co/datasets/{REPO_ID}")
     else:
         print("\n" + "=" * 70)
-        print("❌ DATASET UPLOAD FAILED")
+        print("DATASET UPLOAD FAILED")
         print("=" * 70)
         sys.exit(1)
 

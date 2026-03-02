@@ -2,7 +2,7 @@
 
 ## Project overview
 
-Educational demonstration of autoencoders for AI/ML bootcamp students. Focus on **pedagogical clarity** over implementation complexity — show what autoencoders can do, not every architectural detail.
+Educational demonstration of autoencoders for AI/ML bootcamp students. Focus on **pedagogical clarity** over implementation complexity - show what autoencoders can do, not every architectural detail.
 
 **Current scope** (post Phase 1-2):
 - Image compression (DF2K_OST dataset, 256×256 input, latent_dim=512)
@@ -226,7 +226,7 @@ Combined dataset from DIV2K + Flickr2K + OST:
 
 ### When adding new features
 1. Check [PROJECT_PLAN.md](../PROJECT_PLAN.md) for current phase and specifications
-2. Keep pedagogical focus — students should understand *why* not just *how*
+2. Keep pedagogical focus - students should understand *why* not just *how*
 3. Add docstrings and comments explaining design decisions
 4. Test both notebooks and Streamlit demos
 5. Update README.md if user-facing changes
@@ -241,7 +241,7 @@ Combined dataset from DIV2K + Flickr2K + OST:
 ### When debugging
 - **TensorBoard logs**: `tensorboard --logdir logs/`
 - **Model summaries**: Call `model.summary()` after building
-- **Image values**: Always check `arr.min()`, `arr.max()`, `arr.dtype` — many bugs are normalization issues
+- **Image values**: Always check `arr.min()`, `arr.max()`, `arr.dtype` - many bugs are normalization issues
 - **Cache issues**: Delete `data/` and `.streamlit/cache/` if strange behavior
 
 ### Common pitfalls

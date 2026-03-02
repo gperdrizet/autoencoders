@@ -14,7 +14,7 @@ from PIL import Image
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Image Compression | Autoencoders Demo",
-    page_icon="🗜️",
+    page_icon="",
     layout="wide",
 )
 
@@ -85,11 +85,11 @@ def psnr(orig: np.ndarray, recon: np.ndarray) -> float:
 
 
 # ── UI ────────────────────────────────────────────────────────────────────────
-st.title("🗜️ Image Compression with Autoencoders")
+st.title(" Image Compression with Autoencoders")
 
 st.markdown("""
 An autoencoder compresses your image into **128 numbers** (from 49,152), then
-reconstructs it. That's a **384× compression ratio** — all learned automatically
+reconstructs it. That's a **384× compression ratio** - all learned automatically
 from training data, no hand-crafted rules.
 """)
 
@@ -97,7 +97,7 @@ st.divider()
 
 # Sidebar controls
 with st.sidebar:
-    st.header("⚙️ Settings")
+    st.header(" Settings")
     st.markdown("**Compression**")
     st.metric("Latent dimension", "128")
     st.metric("Compression ratio", "384×")
@@ -112,7 +112,7 @@ with st.sidebar:
 model = load_model()
 
 if model is None:
-    st.error("⚠️ Model unavailable. Make sure the model is trained and available.")
+    st.error("Model unavailable. Make sure the model is trained and available.")
     st.stop()
 
 # ── Image input ───────────────────────────────────────────────────────────────
@@ -172,13 +172,13 @@ if source_img is not None:
         st.subheader("Original (resized to 128×128)")
         st.image(source_img.resize((384, 384), Image.NEAREST), use_container_width=True)
         orig_bytes = image_to_bytes(source_img.resize((128, 128), Image.LANCZOS))
-        st.download_button("⬇️ Download original", orig_bytes, "original.png", "image/png")
+        st.download_button(" Download original", orig_bytes, "original.png", "image/png")
 
     with col_recon:
         st.subheader("Reconstructed (from 128 numbers)")
         st.image(recon_img.resize((384, 384), Image.NEAREST), use_container_width=True)
         recon_bytes = image_to_bytes(recon_img)
-        st.download_button("⬇️ Download reconstructed", recon_bytes, "reconstructed.png", "image/png")
+        st.download_button(" Download reconstructed", recon_bytes, "reconstructed.png", "image/png")
 
     # ── Metrics ────────────────────────────────────────────────────────────
     st.subheader("Quality Metrics")
@@ -191,13 +191,13 @@ if source_img is not None:
 
     # Quality interpretation
     if score_psnr >= 35:
-        st.success(f"✅ Excellent quality ({score_psnr:.1f} dB) — very hard to see differences at this compression.")
+        st.success(f"Excellent quality ({score_psnr:.1f} dB) - very hard to see differences at this compression.")
     elif score_psnr >= 30:
-        st.success(f"✅ Good quality ({score_psnr:.1f} dB) — minor artefacts at this extreme compression ratio.")
+        st.success(f"Good quality ({score_psnr:.1f} dB) - minor artefacts at this extreme compression ratio.")
     elif score_psnr >= 25:
-        st.warning(f"⚠️ Fair quality ({score_psnr:.1f} dB) — noticeable blurring, but structure is preserved.")
+        st.warning(f"Fair quality ({score_psnr:.1f} dB) - noticeable blurring, but structure is preserved.")
     else:
-        st.error(f"❌ Low quality ({score_psnr:.1f} dB) — significant loss at this compression.")
+        st.error(f"Low quality ({score_psnr:.1f} dB) - significant loss at this compression.")
 
     # ── Pixel difference ───────────────────────────────────────────────────
     with st.expander("🔍 Pixel Difference Map"):
@@ -237,7 +237,7 @@ into just **128 numbers**.
 
 **2. Latent space** (the bottleneck):
 These 128 numbers encode the entire image. The network was forced to decide what to keep
-and what to discard — learning that edges, textures, and colours matter; exact pixel
+and what to discard - learning that edges, textures, and colours matter; exact pixel
 values don't.
 
 **3. Decoder** (reconstruction):
