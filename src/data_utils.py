@@ -12,7 +12,7 @@ import tensorflow as tf
 
 
 # HuggingFace dataset configuration (hardcoded)
-DATASET_REPO_ID = "gperdrizet/DF2K_OST"
+dataset_repo_id = "gperdrizet/DF2K_OST"
 
 
 def load_df2k_ost(split='train', max_images=None):
@@ -30,11 +30,11 @@ def load_df2k_ost(split='train', max_images=None):
         numpy array of shape (N, 256, 256, 3) with values in [0, 1]
     """
     print(f"Loading DF2K_OST dataset (split={split})")
-    print(f"Repository: {DATASET_REPO_ID}")
+    print(f"Repository: {dataset_repo_id}")
     
     try:
         # Load dataset from HuggingFace
-        dataset = load_dataset(DATASET_REPO_ID, split=split)
+        dataset = load_dataset(dataset_repo_id, split=split)
         
         if max_images is not None:
             dataset = dataset.select(range(min(max_images, len(dataset))))
@@ -59,7 +59,7 @@ def load_df2k_ost(split='train', max_images=None):
         
     except Exception as e:
         print(f"\nError loading dataset: {e}")
-        print(f"\nMake sure the dataset exists at: https://huggingface.co/datasets/{DATASET_REPO_ID}")
+        print(f"\nMake sure the dataset exists at: https://huggingface.co/datasets/{dataset_repo_id}")
         raise
     print(f"  Data type: {images.dtype}")
     print(f"  Value range: [{images.min():.3f}, {images.max():.3f}]")
@@ -132,10 +132,10 @@ def create_tf_dataset(split='train', batch_size=16, shuffle=True, val_split=0.1,
     Returns:
         (train_dataset, val_dataset, dataset_info) where dataset_info contains sizes
     """
-    print(f"Creating TensorFlow dataset from {DATASET_REPO_ID} (split={split})")
+    print(f"Creating TensorFlow dataset from {dataset_repo_id} (split={split})")
     
     # Load HuggingFace dataset (lazy-loaded, no memory overhead)
-    hf_dataset = load_dataset(DATASET_REPO_ID, split=split)
+    hf_dataset = load_dataset(dataset_repo_id, split=split)
     total_size = len(hf_dataset)
     
     print(f"Total images: {total_size}")
@@ -219,9 +219,9 @@ def create_denoising_tf_dataset(split='train', batch_size=16, noise_level=25,
     Returns:
         (train_dataset, val_dataset, dataset_info)
     """
-    print(f"Creating denoising dataset from {DATASET_REPO_ID} (split={split})")
+    print(f"Creating denoising dataset from {dataset_repo_id} (split={split})")
     
-    hf_dataset = load_dataset(DATASET_REPO_ID, split=split)
+    hf_dataset = load_dataset(dataset_repo_id, split=split)
     total_size = len(hf_dataset)
     
     print(f"Total images: {total_size}")

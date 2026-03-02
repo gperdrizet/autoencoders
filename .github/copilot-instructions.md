@@ -19,6 +19,9 @@ Educational demonstration of autoencoders for AI/ML bootcamp students. Focus on 
 - **Docstrings**: Google style with `Args:` and `Returns:` sections
 - **Type hints**: Not required but use in function signatures when helpful
 - **Variable names**: Descriptive over terse (`latent_dim` not `ld`)
+- **Constants**: Use lowercase (not ALL_CAPS) for module-level constants and configuration variables
+  - Example: `image_size = 256` not `IMAGE_SIZE = 256`
+  - Exception: Python dunder constants like `__version__` follow Python conventions
 - **Line length**: ~88 chars (Black-style) but not enforced
 
 ### Python conventions
@@ -36,6 +39,40 @@ def load_df2k_ost(split='train', max_images=None):
         numpy array of shape (N, 256, 256, 3) with values in [0, 1]
     """
 ```
+
+### Code formatting for readability
+- **Blank lines in control blocks**: Add blank lines within `try/except` and `if/else` blocks to visually separate logical groups
+  - After variable initialization before control flow starts
+  - Between the end of a loop/operation and a following print/return statement
+  - After the last statement in a `try` block before the `except`
+  - After control blocks before the next section
+
+Example:
+```python
+gpus = tf.config.list_physical_devices('GPU')
+
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+
+        print(f'GPU memory growth enabled for {len(gpus)} GPU(s)')
+
+    except RuntimeError as e:
+        print(f'GPU configuration error: {e}')
+```
+
+### String and formatting conventions
+- **Quotes**: Use single quotes for strings everywhere possible (including print statements and docstrings)
+  - Exception: Use double quotes when f-string contains single quotes to avoid escaping
+  - Example: `f"Batches: {dataset_info['train_size']}"` (avoids `f'Batches: {dataset_info[\'train_size\']}'`)
+- **No emojis or decorative symbols**: Keep code professional and clean
+  - Avoid: ✅ ❌ ⚠️ → and other symbols in code or notebooks
+  - Use plain text: 'Success', 'Error', 'Warning', 'to'
+- **Punctuation**: Use hyphens (-) not em-dashes (—) in all text
+- **Sentence case**: Apply to all titles, headings, plot labels, and list items
+  - Example: 'Training history' not 'Training History'
+  - Example: 'Load data' not 'Load Data'
 
 ### Keras model building
 - **Named layers**: Always use `name=` parameter for debugging and visualization
@@ -230,6 +267,13 @@ Combined dataset from DIV2K + Flickr2K + OST:
 3. Add docstrings and comments explaining design decisions
 4. Test both notebooks and Streamlit demos
 5. Update README.md if user-facing changes
+6. Follow string and formatting conventions (single quotes, sentence case, no emojis)
+
+### When editing notebooks
+- **Never edit notebook JSON directly**: Use proper notebook editing tools or `replace_string_in_file`
+- Direct JSON edits (e.g., `sed` on `.ipynb` files) don't update open notebooks in VS Code
+- Users must reload notebooks to see changes made via JSON editing
+- Always use the proper tools to ensure changes are immediately visible
 
 ### When modifying models
 1. Change architecture in `src/model_utils.py` first
