@@ -33,9 +33,9 @@ def load_model():
     from tensorflow import keras
     from huggingface_hub import hf_hub_download
 
-    hf_repo_id = os.getenv("HF_REPO_ID", "gperdrizet/autoencoders")
+    hf_repo_id = os.getenv("DENOISING_AE_REPO", "gperdrizet/denoising_autoencoder")
     hf_token   = os.getenv("HF_TOKEN", None)
-    model_name = "denoising_ae_sigma25.keras"
+    model_name = "denoising_ae.keras"
 
     local_path = project_root / "models" / model_name
     if local_path.exists():
@@ -54,7 +54,7 @@ def load_model():
         return None
 
 
-def preprocess_image(img: Image.Image, size: int = 128) -> np.ndarray:
+def preprocess_image(img: Image.Image, size: int = 256) -> np.ndarray:
     img = img.convert("RGB").resize((size, size), Image.LANCZOS)
     return (np.array(img, dtype=np.float32) / 255.0)[np.newaxis]
 
@@ -111,8 +111,7 @@ with st.sidebar:
         )
     st.divider()
     st.markdown("**Model**")
-    st.caption("Denoising AE - latent dim 256")
-    st.caption("Trained on DF2K_OST, σ=25 Gaussian noise")
+    st.caption("Pre-trained on DF2K_OST (~13,800 images @ 256×256), σ=25 Gaussian noise")
 
 # Load model
 model = load_model()
@@ -145,9 +144,8 @@ elif use_sample:
     with st.spinner("Loading sample…"):
         try:
             images = load_df2k_ost(
-                image_size=128,
+                split='train',
                 max_images=5,
-                cache_dir=project_root / "data" / "df2k_ost_128",
             )
             idx = np.random.randint(len(images))
             source_img = Image.fromarray((images[idx] * 255).astype(np.uint8))
@@ -176,12 +174,12 @@ if source_img is not None:
     # ── Three-column display ───────────────────────────────────────────────
     col1, col2, col3 = st.columns(3)
 
-    display_size = (384, 384)
+    display_size = (512, 512)
 
     with col1:
         st.subheader("Clean Original")
         st.image(clean_img.resize(display_size, Image.NEAREST), use_container_width=True)
-        st.caption("Original image (resized to 128×128)")
+        st.caption("Original image (resized to 256×256)")
 
     with col2:
         st.subheader(f"Noisy (σ={noise_level})")

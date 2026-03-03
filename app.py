@@ -28,7 +28,7 @@ representation and then **reconstruct** the original from that compressed form.
 
 ```
   Input  ──►  Encoder  ──►  Latent Space  ──►  Decoder  ──►  Output
-(196,608)         │              (512)               │         (196,608)
+(256×256×3)       │          (compressed)          │        (256×256×3)
                  └─── learns what matters ──────────┘
 ```
 
@@ -68,16 +68,13 @@ card1, card2 = st.columns(2)
 with card1:
     st.subheader(" Image Compression")
     st.markdown("""
-**384× compression ratio** using a 128-dimensional latent space.
+Learn to compress images into a compact latent representation, then reconstruct them.
+Quality comparable to JPEG at quality level 60-70.
 
-Upload any image and watch the autoencoder compress it to 128 numbers, then
-reconstruct it. Compare quality against standard JPEG.
-
-- **Architecture**: 4-block CNN encoder/decoder
-- **Dataset**: DF2K_OST high-quality images
-- **Latent dim**: 128 values from 49,152 inputs
+- **Architecture**: 5-block CNN encoder/decoder
+- **Dataset**: DF2K_OST high-quality images (~13,800 @ 256×256)
     """)
-    st.page_link("pages/01-compression.py", label="Try Compression Demo →", icon="")
+    st.page_link("pages/01-compression.py", label="Try Compression Demo →")
 
 with card2:
     st.subheader(" Image Denoising")
@@ -87,11 +84,11 @@ with card2:
 Add noise to an image and let the autoencoder restore it. The model has learned
 what clean images look like and pushes noisy inputs toward that space.
 
-- **Architecture**: Same CNN, larger latent (256)
+- **Architecture**: 5-block CNN encoder/decoder
 - **Noise level**: σ=25 Gaussian
 - **Metric**: PSNR improvement in dB
     """)
-    st.page_link("pages/02-denoising.py", label="Try Denoising Demo →", icon="")
+    st.page_link("pages/02-denoising.py", label="Try Denoising Demo →")
 
 st.divider()
 
@@ -107,10 +104,12 @@ Encoder:
   → Conv2D(128, 3×3, stride=2)  → BatchNorm → LeakyReLU  → 64×64×128
   → Conv2D(256, 3×3, stride=2)  → BatchNorm → LeakyReLU  → 32×32×256
   → Conv2D(512, 3×3, stride=2)  → BatchNorm → LeakyReLU  → 16×16×512
-  → Flatten → Dense(latent_dim)                           → 512
+  → Conv2D(512, 3×3, stride=2)  → BatchNorm → LeakyReLU  → 8×8×512
+  → Flatten → Dense(latent_dim)
 
 Decoder (mirror image):
-  Dense(16×16×512) → Reshape(16,16,512)
+  Dense(8×8×512) → Reshape(8,8,512)
+  → ConvTranspose(512, 3×3, stride=2) → BatchNorm → LeakyReLU  → 16×16×512
   → ConvTranspose(512, 3×3, stride=2) → BatchNorm → LeakyReLU  → 32×32×512
   → ConvTranspose(256, 3×3, stride=2) → BatchNorm → LeakyReLU  → 64×64×256
   → ConvTranspose(128, 3×3, stride=2) → BatchNorm → LeakyReLU  → 128×128×128

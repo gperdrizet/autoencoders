@@ -34,9 +34,9 @@ def load_model():
     from tensorflow import keras
     from huggingface_hub import hf_hub_download
 
-    hf_repo_id = os.getenv("HF_REPO_ID", "gperdrizet/autoencoders")
+    hf_repo_id = os.getenv("COMPRESSION_AE_REPO", "gperdrizet/compression_autoencoder")
     hf_token   = os.getenv("HF_TOKEN", None)
-    model_name = "compression_ae_latent128.keras"
+    model_name = "compression_ae.keras"
 
     # Try local model first
     local_path = project_root / "models" / model_name
@@ -57,7 +57,7 @@ def load_model():
         return None
 
 
-def preprocess_image(img: Image.Image, size: int = 128) -> np.ndarray:
+def preprocess_image(img: Image.Image, size: int = 256) -> np.ndarray:
     """Resize and normalise a PIL image to a (1, size, size, 3) float32 array."""
     img = img.convert("RGB").resize((size, size), Image.LANCZOS)
     arr = np.array(img, dtype=np.float32) / 255.0
@@ -88,9 +88,8 @@ def psnr(orig: np.ndarray, recon: np.ndarray) -> float:
 st.title(" Image Compression with Autoencoders")
 
 st.markdown("""
-An autoencoder compresses your image into **128 numbers** (from 49,152), then
-reconstructs it. That's a **384× compression ratio** - all learned automatically
-from training data, no hand-crafted rules.
+An autoencoder learns to compress your image into a compact representation, then
+reconstructs it. All learned automatically from training data, no hand-crafted rules.
 """)
 
 st.divider()
@@ -98,15 +97,9 @@ st.divider()
 # Sidebar controls
 with st.sidebar:
     st.header(" Settings")
-    st.markdown("**Compression**")
-    st.metric("Latent dimension", "128")
-    st.metric("Compression ratio", "384×")
-    st.metric("Input size", "49,152 values")
-    st.metric("Compressed size", "128 values")
-    st.divider()
     st.markdown("**Model**")
-    st.caption("Pre-trained on DF2K_OST (900 images @ 128×128)")
-    st.caption("Convolutional AE with 4 encoder/decoder blocks")
+    st.caption("Pre-trained on DF2K_OST (~13,800 images @ 256×256)")
+    st.caption("Convolutional AE with 5 encoder/decoder blocks")
 
 # Load model
 model = load_model()
@@ -146,9 +139,8 @@ elif sample_choice != "None":
     with st.spinner("Loading sample image…"):
         try:
             images = load_df2k_ost(
-                image_size=128,
+                split='train',
                 max_images=5,
-                cache_dir=project_root / "data" / "df2k_ost_128",
             )
             source_img = Image.fromarray((images[0] * 255).astype(np.uint8))
         except Exception as e:
@@ -169,31 +161,27 @@ if source_img is not None:
     col_orig, col_recon = st.columns(2)
 
     with col_orig:
-        st.subheader("Original (resized to 128×128)")
-        st.image(source_img.resize((384, 384), Image.NEAREST), use_container_width=True)
-        orig_bytes = image_to_bytes(source_img.resize((128, 128), Image.LANCZOS))
+        st.subheader("Original (resized to 256×256)")
+        st.image(source_img.resize((512, 512), Image.NEAREST), use_container_width=True)
+        orig_bytes = image_to_bytes(source_img.resize((256, 256), Image.LANCZOS))
         st.download_button(" Download original", orig_bytes, "original.png", "image/png")
 
     with col_recon:
-        st.subheader("Reconstructed (from 128 numbers)")
-        st.image(recon_img.resize((384, 384), Image.NEAREST), use_container_width=True)
+        st.subheader("Reconstructed")
+        st.image(recon_img.resize((512, 512), Image.NEAREST), use_container_width=True)
         recon_bytes = image_to_bytes(recon_img)
         st.download_button(" Download reconstructed", recon_bytes, "reconstructed.png", "image/png")
 
     # ── Metrics ────────────────────────────────────────────────────────────
     st.subheader("Quality Metrics")
 
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("PSNR", f"{score_psnr:.1f} dB",  help="Peak Signal-to-Noise Ratio. Higher is better. >30 dB is excellent.")
-    m2.metric("Compression Ratio", "384×",      help="Input values / latent values = 49,152 / 128")
-    m3.metric("Input values", "49,152",         help="128 × 128 × 3 pixel values")
-    m4.metric("Latent values", "128",           help="The entire image encoded as 128 floating-point numbers")
+    st.metric("PSNR", f"{score_psnr:.1f} dB",  help="Peak Signal-to-Noise Ratio. Higher is better. >30 dB is excellent.")
 
     # Quality interpretation
     if score_psnr >= 35:
-        st.success(f"Excellent quality ({score_psnr:.1f} dB) - very hard to see differences at this compression.")
+        st.success(f"Excellent quality ({score_psnr:.1f} dB) - very hard to see differences.")
     elif score_psnr >= 30:
-        st.success(f"Good quality ({score_psnr:.1f} dB) - minor artefacts at this extreme compression ratio.")
+        st.success(f"Good quality ({score_psnr:.1f} dB) - minor artefacts may be visible.")
     elif score_psnr >= 25:
         st.warning(f"Fair quality ({score_psnr:.1f} dB) - noticeable blurring, but structure is preserved.")
     else:
@@ -231,16 +219,16 @@ else:
     with st.expander("How does it work?"):
         st.markdown("""
 **1. Encoder** (compression):
-The encoder passes the image through 4 convolutional layers, each halving the spatial
-dimensions: 128→64→32→16→8. A final Dense layer compresses the 8×8×512 feature map
-into just **128 numbers**.
+The encoder passes the image through 5 convolutional layers, each halving the spatial
+dimensions: 256→128→64→32→16→8. A final Dense layer compresses the 8×8×512 feature map
+into just **4096 numbers**.
 
 **2. Latent space** (the bottleneck):
-These 128 numbers encode the entire image. The network was forced to decide what to keep
+These 4096 numbers encode the entire image. The network was forced to decide what to keep
 and what to discard - learning that edges, textures, and colours matter; exact pixel
 values don't.
 
 **3. Decoder** (reconstruction):
-The decoder uses transposed convolutions to rebuild the image from those 128 numbers,
-producing a visually similar 128×128×3 output.
+The decoder uses transposed convolutions to rebuild the image from those 4096 numbers,
+producing a visually similar 256×256×3 output.
         """)
