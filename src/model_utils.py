@@ -69,7 +69,15 @@ def build_compression_ae(latent_dim=512, input_shape=(256, 256, 3)):
     x = layers.BatchNormalization(name='enc_bn4b')(x)
     x = layers.LeakyReLU(0.2, name='enc_relu4b')(x)
     
-    # Flatten and compress to latent dimension
+    # 16×16 → 8×8 (additional layer to reduce parameters before bottleneck)
+    x = layers.Conv2D(512, 3, strides=2, padding='same', name='enc_conv5')(x)
+    x = layers.BatchNormalization(name='enc_bn5')(x)
+    x = layers.LeakyReLU(0.2, name='enc_relu5')(x)
+    x = layers.Conv2D(512, 3, padding='same', name='enc_conv5b')(x)
+    x = layers.BatchNormalization(name='enc_bn5b')(x)
+    x = layers.LeakyReLU(0.2, name='enc_relu5b')(x)
+    
+    # Flatten and compress to latent dimension (8×8×512 = 32,768)
     x = layers.Flatten(name='enc_flatten')(x)
     latent = layers.Dense(latent_dim, activation='relu', name='latent')(x)
     
@@ -79,11 +87,19 @@ def build_compression_ae(latent_dim=512, input_shape=(256, 256, 3)):
     decoder_input = layers.Input(shape=(latent_dim,), name='latent_input')
     x = decoder_input
     
-    # Project and reshape
-    x = layers.Dense(16 * 16 * 512, activation='relu', name='dec_dense')(x)
-    x = layers.Reshape((16, 16, 512), name='dec_reshape')(x)
+    # Project and reshape (8×8×512 = 32,768)
+    x = layers.Dense(8 * 8 * 512, activation='relu', name='dec_dense')(x)
+    x = layers.Reshape((8, 8, 512), name='dec_reshape')(x)
     
     # Upsampling blocks (deeper to match encoder)
+    # 8×8 → 16×16
+    x = layers.Conv2DTranspose(512, 3, strides=2, padding='same', name='dec_conv0')(x)
+    x = layers.BatchNormalization(name='dec_bn0')(x)
+    x = layers.LeakyReLU(0.2, name='dec_relu0')(x)
+    x = layers.Conv2D(512, 3, padding='same', name='dec_conv0b')(x)
+    x = layers.BatchNormalization(name='dec_bn0b')(x)
+    x = layers.LeakyReLU(0.2, name='dec_relu0b')(x)
+    
     # 16×16 → 32×32
     x = layers.Conv2DTranspose(512, 3, strides=2, padding='same', name='dec_conv1')(x)
     x = layers.BatchNormalization(name='dec_bn1')(x)
@@ -129,19 +145,19 @@ def build_compression_ae(latent_dim=512, input_shape=(256, 256, 3)):
     return autoencoder, encoder, decoder
 
 
-def build_denoising_ae(input_shape=(256, 256, 3)):
+def build_denoising_ae(latent_dim=4096, input_shape=(256, 256, 3)):
     """
     Build a denoising autoencoder.
     
-    Uses same architecture as compression AE with latent_dim=512
-    (same as compression for consistency).
+    Uses same architecture as compression AE.
     
     Args:
+        latent_dim: Dimension of compressed representation (default: 4096)
         input_shape: Input image shape (H, W, C)
     
     Returns:
         autoencoder model
     """
-    # Use same latent dimension as compression for consistency
-    autoencoder, _, _ = build_compression_ae(latent_dim=512, input_shape=input_shape)
+    # Use same architecture as compression
+    autoencoder, _, _ = build_compression_ae(latent_dim=latent_dim, input_shape=input_shape)
     return autoencoder
