@@ -219,16 +219,16 @@ else:
     with st.expander("How does it work?"):
         st.markdown("""
 **1. Encoder** (compression):
-The encoder passes the image through 5 convolutional layers, each halving the spatial
-dimensions: 256→128→64→32→16→8. A final Dense layer compresses the 8×8×512 feature map
-into just **4096 numbers**.
+The encoder passes the image through 4 convolutional layers, each halving the spatial
+dimensions: 256→128→64→32→16. A final Dense layer compresses the 16×16×512 feature map
+into just **2048 numbers**.
 
 **2. Latent space** (the bottleneck):
-These 4096 numbers encode the entire image. The network was forced to decide what to keep
+These 2048 numbers encode the entire image. The network was forced to decide what to keep
 and what to discard - learning that edges, textures, and colours matter; exact pixel
 values don't.
 
 **3. Decoder** (reconstruction):
-The decoder uses transposed convolutions to rebuild the image from those 4096 numbers,
+The decoder uses transposed convolutions to rebuild the image from those 2048 numbers,
 producing a visually similar 256×256×3 output.
         """)

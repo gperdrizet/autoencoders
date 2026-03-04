@@ -7,7 +7,7 @@ from tensorflow import keras
 from tensorflow.keras import layers
 
 
-def build_compression_ae(latent_dim=512, input_shape=(256, 256, 3)):
+def build_compression_ae(latent_dim=2048, input_shape=(256, 256, 3)):
     """
     Build a convolutional autoencoder for image compression.
     
@@ -17,7 +17,7 @@ def build_compression_ae(latent_dim=512, input_shape=(256, 256, 3)):
         Decoder: Conv2DTranspose layers reconstruct from latent only
     
     Args:
-        latent_dim: Dimension of compressed representation (default: 512)
+        latent_dim: Dimension of compressed representation (default: 2048)
         input_shape: Input image shape (H, W, C)
     
     Returns:
@@ -129,14 +129,14 @@ def build_compression_ae(latent_dim=512, input_shape=(256, 256, 3)):
     return autoencoder, encoder, decoder
 
 
-def build_denoising_ae(latent_dim=4096, input_shape=(256, 256, 3)):
+def build_denoising_ae(latent_dim=2048, input_shape=(256, 256, 3)):
     """
     Build a denoising autoencoder.
     
     Uses same architecture as compression AE.
     
     Args:
-        latent_dim: Dimension of compressed representation (default: 4096)
+        latent_dim: Dimension of compressed representation (default: 2048)
         input_shape: Input image shape (H, W, C)
     
     Returns:

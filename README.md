@@ -9,7 +9,7 @@ This repository is a **survey of autoencoder applications** - the goal is to sho
 
 Two demonstrations focusing on image processing:
 
-1. **Image compression** - Compress 256×256 images to 512 numbers (384× ratio) using a convolutional AE trained on DF2K_OST high-quality photographs
+1. **Image compression** - Compress 256×256 images to 2048 numbers (96× ratio) using a convolutional AE trained on DF2K_OST high-quality photographs
 2. **Image denoising** - Remove Gaussian noise from images; the AE learns the manifold of clean images and pushes noisy inputs back onto it
 
 Each demo includes:
@@ -45,7 +45,7 @@ jupyter notebook
 
 | Notebook | Description |
 |---|---|
-| `notebooks/01-compression.ipynb` | Train compression autoencoder (latent_dim=512, 256×256 images) |
+| `notebooks/01-compression.ipynb` | Train compression autoencoder (latent_dim=2048, 256×256 images) |
 | `notebooks/02-denoising.ipynb` | Train denoising autoencoder (σ=25 Gaussian noise, 256×256 images) |
 
 Set `TRAIN_MODEL = False` in any notebook to skip training and use the pre-trained model.
@@ -105,8 +105,8 @@ Input  256×256×3                 Dense(16×16×512) → Reshape
 
 Each Conv block uses BatchNorm + LeakyReLU(0.2).
 
-- **Compression**: `latent_dim=512` → 384× compression ratio
-- **Denoising**: `latent_dim=512` → same architecture, trained on noisy inputs
+- **Compression**: `latent_dim=2048` → 96× compression ratio
+- **Denoising**: `latent_dim=2048` → same architecture, trained on noisy inputs
 
 ---
 
@@ -116,7 +116,7 @@ Each Conv block uses BatchNorm + LeakyReLU(0.2).
 
 | Demo | Metric | Guide | Notes |
 |---|---|---|---|
-| Compression | PSNR | > 30 dB | At 384× compression ratio (196,608 → 512) |
+| Compression | PSNR | > 30 dB | At 96× compression ratio (196,608 → 2048) |
 | Compression | SSIM | > 0.90 | Visual similarity to original |
 | Denoising | PSNR | > 28 dB | vs noisy input at σ=25 |
 | Denoising | SSIM | > 0.85 | Noise removal without over-smoothing |

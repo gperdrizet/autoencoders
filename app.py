@@ -69,9 +69,9 @@ with card1:
     st.subheader(" Image Compression")
     st.markdown("""
 Learn to compress images into a compact latent representation, then reconstruct them.
-Quality comparable to JPEG at quality level 60-70.
+Quality comparable to JPEG at quality level 50-60.
 
-- **Architecture**: 5-block CNN encoder/decoder
+- **Architecture**: 4-block CNN encoder/decoder
 - **Dataset**: DF2K_OST high-quality images (~13,800 @ 256×256)
     """)
     st.page_link("pages/01-compression.py", label="Try Compression Demo →")
@@ -84,7 +84,7 @@ with card2:
 Add noise to an image and let the autoencoder restore it. The model has learned
 what clean images look like and pushes noisy inputs toward that space.
 
-- **Architecture**: 5-block CNN encoder/decoder
+- **Architecture**: 4-block CNN encoder/decoder
 - **Noise level**: σ=25 Gaussian
 - **Metric**: PSNR improvement in dB
     """)
@@ -104,12 +104,10 @@ Encoder:
   → Conv2D(128, 3×3, stride=2)  → BatchNorm → LeakyReLU  → 64×64×128
   → Conv2D(256, 3×3, stride=2)  → BatchNorm → LeakyReLU  → 32×32×256
   → Conv2D(512, 3×3, stride=2)  → BatchNorm → LeakyReLU  → 16×16×512
-  → Conv2D(512, 3×3, stride=2)  → BatchNorm → LeakyReLU  → 8×8×512
   → Flatten → Dense(latent_dim)
 
 Decoder (mirror image):
-  Dense(8×8×512) → Reshape(8,8,512)
-  → ConvTranspose(512, 3×3, stride=2) → BatchNorm → LeakyReLU  → 16×16×512
+  Dense(16×16×512) → Reshape(16,16,512)
   → ConvTranspose(512, 3×3, stride=2) → BatchNorm → LeakyReLU  → 32×32×512
   → ConvTranspose(256, 3×3, stride=2) → BatchNorm → LeakyReLU  → 64×64×256
   → ConvTranspose(128, 3×3, stride=2) → BatchNorm → LeakyReLU  → 128×128×128
