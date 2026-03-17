@@ -8,7 +8,7 @@
 	"name": "Autoencoders GPU",
 	"image": "gperdrizet/deeplearning-gpu",
     "runArgs": [
-		"--gpus", "all",              // Use all available GPUs
+		"--gpus", "1",              // Use all available GPUs
 		"--pid=host",                 // Use host PIDs, needed for nvidia-smi process list
 		"--ipc=host",                 // Connect to host interprocess namespace
 		"--ulimit", "memlock=-1",     // Turn of memory lock limit
