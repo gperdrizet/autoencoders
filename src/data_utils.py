@@ -5,36 +5,41 @@ Data utilities for loading and processing DF2K_OST image dataset.
 import os
 from pathlib import Path
 import numpy as np
+
+import datasets
 from PIL import Image
-from datasets import load_dataset
 from tqdm import tqdm
 import tensorflow as tf
 
+# Turn off fancy progress bars from HuggingFace datasets
+datasets.disable_progress_bar()
 
 # HuggingFace dataset configuration (hardcoded)
 dataset_repo_id = "gperdrizet/DF2K_OST"
 
 
-def load_df2k_ost(split='train', max_images=None):
+def load_df2k_ost(split='train', max_images=None, data_path='../data'):
     """
     Load DF2K_OST dataset from HuggingFace Hub.
     
     The dataset is automatically downloaded and cached on first use.
-    All images are 256×256 RGB.
+    All images are 256x256 RGB.
     
     Args:
         split: 'train' or 'validation'
         max_images: Maximum number of images to load (None = all)
+        data_path: Directory to cache the dataset (default: '../data')
     
     Returns:
         numpy array of shape (N, 256, 256, 3) with values in [0, 1]
     """
+
     print(f"Loading DF2K_OST dataset (split={split})")
     print(f"Repository: {dataset_repo_id}")
     
     try:
         # Load dataset from HuggingFace
-        dataset = load_dataset(dataset_repo_id, split=split)
+        dataset = datasets.load_dataset(dataset_repo_id, split=split, cache_dir=data_path)
         
         if max_images is not None:
             dataset = dataset.select(range(min(max_images, len(dataset))))
@@ -43,6 +48,7 @@ def load_df2k_ost(split='train', max_images=None):
         
         # Convert to numpy arrays
         images = []
+
         for sample in tqdm(dataset, desc="Loading images"):
             img = sample['image']  # PIL Image
             img_array = np.array(img, dtype=np.float32) / 255.0
@@ -60,11 +66,8 @@ def load_df2k_ost(split='train', max_images=None):
     except Exception as e:
         print(f"\nError loading dataset: {e}")
         print(f"\nMake sure the dataset exists at: https://huggingface.co/datasets/{dataset_repo_id}")
-        raise
-    print(f"  Data type: {images.dtype}")
-    print(f"  Value range: [{images.min():.3f}, {images.max():.3f}]")
     
-    return images
+        raise
 
 
 def create_train_val_split(images, val_split=0.1, seed=42):
@@ -115,7 +118,20 @@ def add_gaussian_noise(images, noise_level=25):
     return np.clip(noisy_images, 0, 1)
 
 
-def create_tf_dataset(split='train', batch_size=16, shuffle=True, val_split=0.1, seed=42):
+def image_generator(hf_dataset):
+    """Generator that yields (image, image) pairs for autoencoder training."""
+
+    for sample in hf_dataset:
+        img = sample['image']  # PIL Image
+        img_array = np.array(img, dtype=np.float32) / 255.0
+
+        yield img_array, img_array
+
+
+def create_tf_dataset(
+        split='train', batch_size=16, shuffle=True,
+        val_split=0.1, data_path='../data',seed=315
+):
     """
     Create TensorFlow dataset that loads images on-the-fly (memory efficient).
     
@@ -127,15 +143,17 @@ def create_tf_dataset(split='train', batch_size=16, shuffle=True, val_split=0.1,
         batch_size: Batch size for training
         shuffle: Whether to shuffle the dataset
         val_split: Fraction for validation split (only used if split='train')
+        data_path: Directory to cache the dataset (default: '../data')
         seed: Random seed for reproducibility
     
     Returns:
         (train_dataset, val_dataset, dataset_info) where dataset_info contains sizes
     """
+
     print(f"Creating TensorFlow dataset from {dataset_repo_id} (split={split})")
     
     # Load HuggingFace dataset (lazy-loaded, no memory overhead)
-    hf_dataset = load_dataset(dataset_repo_id, split=split)
+    hf_dataset = datasets.load_dataset(dataset_repo_id, split=split, cache_dir=data_path)
     total_size = len(hf_dataset)
     
     print(f"Total images: {total_size}")
@@ -153,17 +171,12 @@ def create_tf_dataset(split='train', batch_size=16, shuffle=True, val_split=0.1,
         val_hf = hf_dataset.select(val_indices)
         
         print(f"Split: {len(train_hf)} train, {len(val_hf)} validation")
+
     else:
         train_hf = hf_dataset
         val_hf = None
         print(f"No split: {len(train_hf)} images")
-    
-    def image_generator(hf_dataset):
-        """Generator that yields (image, image) pairs for autoencoder training."""
-        for sample in hf_dataset:
-            img = sample['image']  # PIL Image
-            img_array = np.array(img, dtype=np.float32) / 255.0
-            yield img_array, img_array
+
     
     # Create train dataset
     train_dataset = tf.data.Dataset.from_generator(
@@ -203,8 +216,24 @@ def create_tf_dataset(split='train', batch_size=16, shuffle=True, val_split=0.1,
     return train_dataset, val_dataset, dataset_info
 
 
-def create_denoising_tf_dataset(split='train', batch_size=16, noise_level=25, 
-                                shuffle=True, val_split=0.1, seed=42):
+def denoising_generator(hf_dataset, noise_std):
+    """Generator that yields (noisy_image, clean_image) pairs."""
+
+    for sample in hf_dataset:
+        img = sample['image']
+        clean = np.array(img, dtype=np.float32) / 255.0
+        
+        # Add noise
+        noise = np.random.normal(0, noise_std, clean.shape).astype(np.float32)
+        noisy = np.clip(clean + noise, 0, 1)
+        
+        yield noisy, clean
+
+
+def create_denoising_tf_dataset(
+        split='train', batch_size=16, noise_level=25, 
+        shuffle=True, val_split=0.1, seed=42, data_path='../data'
+):
     """
     Create TensorFlow dataset for denoising (loads images on-the-fly with noise).
     
@@ -215,13 +244,15 @@ def create_denoising_tf_dataset(split='train', batch_size=16, noise_level=25,
         shuffle: Whether to shuffle the dataset
         val_split: Fraction for validation split
         seed: Random seed for reproducibility
+        data_path: Directory to cache the dataset (default: '../data')
     
     Returns:
         (train_dataset, val_dataset, dataset_info)
     """
+
     print(f"Creating denoising dataset from {dataset_repo_id} (split={split})")
     
-    hf_dataset = load_dataset(dataset_repo_id, split=split)
+    hf_dataset = datasets.load_dataset(dataset_repo_id, split=split, cache_dir=data_path)
     total_size = len(hf_dataset)
     
     print(f"Total images: {total_size}")
@@ -238,23 +269,12 @@ def create_denoising_tf_dataset(split='train', batch_size=16, noise_level=25,
         val_hf = hf_dataset.select(val_indices)
         
         print(f"Split: {len(train_hf)} train, {len(val_hf)} validation")
+
     else:
         train_hf = hf_dataset
         val_hf = None
     
     noise_std = noise_level / 255.0
-    
-    def denoising_generator(hf_dataset, noise_std):
-        """Generator that yields (noisy_image, clean_image) pairs."""
-        for sample in hf_dataset:
-            img = sample['image']
-            clean = np.array(img, dtype=np.float32) / 255.0
-            
-            # Add noise
-            noise = np.random.normal(0, noise_std, clean.shape).astype(np.float32)
-            noisy = np.clip(clean + noise, 0, 1)
-            
-            yield noisy, clean
     
     # Create train dataset
     train_dataset = tf.data.Dataset.from_generator(
