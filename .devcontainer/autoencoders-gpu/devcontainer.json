@@ -6,18 +6,18 @@
 	// See here: https://hub.docker.com/r/gperdrizet/deeplearning-gpu
     // And here: https://docs.nvidia.com/deeplearning/frameworks/tensorflow-release-notes/rel-24-06.html
 	"name": "Autoencoders GPU",
-	"image": "gperdrizet/deeplearning-gpu",
+	"image": "gperdrizet/deeplearning-nvidia",
     "runArgs": [
-		"--gpus", "1",              // Use all available GPUs
+		"--gpus", "device=1",         // Use first avalible GPU
 		"--pid=host",                 // Use host PIDs, needed for nvidia-smi process list
 		"--ipc=host",                 // Connect to host interprocess namespace
 		"--ulimit", "memlock=-1",     // Turn of memory lock limit
 		"--ulimit", "stack=67108864", // Increase process stack limit to 64 MB
-		//"--publish", "8501:8501",     // Map Streamlit port for web app access
-		//"--publish", "6006:6006",     // Map TensorBoard port for monitoring
+		"--publish", "8501:8501",     // Map Streamlit port for web app access
+		"--publish", "6006:6006",     // Map TensorBoard port for monitoring
 		"--network=bridge"            // Explicitly use bridge network for internet access
 	],
-	//"forwardPorts": [8501, 6006],     // Auto-forward Streamlit and TensorBoard ports
+	"forwardPorts": [8501, 6006],     // Auto-forward Streamlit and TensorBoard ports
 	"remoteUser": "vscode",           // Use the 'vscode' user provided by the base image
 	"containerEnv": {
 		"TF_CPP_MIN_LOG_LEVEL": "1"   // Suppress TensorFlow INFO logs for cleaner output
@@ -32,16 +32,17 @@
 		// Use 'settings' to set default VS code values on container create
 		"settings": {
 			// Set the default Python interpreter
-			"python.defaultInterpreterPath": "/usr/bin/python",
+			"python.defaultInterpreterPath": "/usr/local/bin/python",
 			
 			// Exclude other Python versions from Jupyter kernel list
 			// Prevents confusion by hiding system Python versions we don't want to use
 			"jupyter.kernels.excludePythonEnvironments": [
 				"/bin/python",
 				"/bin/python3",
-				"/bin/python3.10",
+				"/bin/python3.12",
 				"/usr/bin/python3",
-				"/usr/bin/python3.10"
+				"/usr/bin/python3.12",
+				"/usr/local/bin/python3"
 			],
 			
 			// Disable automatic port forwarding to give explicit control
@@ -68,7 +69,7 @@
 	"onCreateCommand": "",
 
 	// Use 'postCreateCommand' to run commands once after the container is created
-	"postCreateCommand": "mkdir -p logs && mkdir -p models && mkdir -p data && pip install -r requirements.txt",
+	"postCreateCommand": "mkdir -p logs && mkdir -p models && mkdir -p data && pip install --force-reinstall --no-deps sympy==1.13.1 && pip install -r requirements.txt",
 
 	// Use 'postAttachCommand' to run TensorBoard
 	"postAttachCommand": ""

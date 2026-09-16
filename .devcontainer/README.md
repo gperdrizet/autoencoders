@@ -25,6 +25,3 @@ This project supports both GPU and CPU-only development environments using VS Co
 
 ## Customization
 Both containers provide identical development environments except for hardware support.
-
-## More Info
-See [CIFAR10 DevContainer Guide](https://github.com/gperdrizet/CIFAR10/blob/main/.devcontainer/README.md) for reference.
