@@ -8,8 +8,12 @@
 	"name": "Autoencoders GPU",
 	"image": "gperdrizet/deeplearning-nvidia:7.0.1",
     "runArgs": [
-		//"--gpus", "device=1,2",     // Choose which GPU(s) to make available to the container
-		"--runtime=nvidia",           // Used in conjunction with NVIDIA_VISIBLE_DEVICES to pass multiple GPUs
+		//"--gpus", "device=0",       // Choose which GPU to make available to the container (to use 
+	                                  // multiple GPUs comment this line and use --runtime=nvidia instead)
+
+		"--runtime=nvidia",           // Used in conjunction with NVIDIA_VISIBLE_DEVICES to pass multiple
+		                              // GPUs (to use a single GPU, comment this line and use --gpus instead)
+
 		"--pid=host",                 // Use host PIDs, needed for nvidia-smi process list
 		"--ipc=host",                 // Connect to host interprocess namespace
 		"--ulimit", "memlock=-1",     // Turn of memory lock limit
@@ -19,9 +23,11 @@
 		"--network=bridge"            // Explicitly use bridge network for internet access
 	],
 	// "forwardPorts": [8501, 6006],     // Auto-forward Streamlit and TensorBoard ports
-	"remoteUser": "vscode",           // Use the 'vscode' user provided by the base image
+	"remoteUser": "vscode",              // Use the 'vscode' user provided by the base image
 	"containerEnv": {
-		"NVIDIA_VISIBLE_DEVICES": "1,2", // Used to pass multiple GPU device IDs to the container
+		"NVIDIA_VISIBLE_DEVICES": "1,2", // Used to pass multiple GPU device IDs to the container if using a 
+										 // single GPU comment this line and pass a single index to --gpus instead
+
 		"TF_CPP_MIN_LOG_LEVEL": "1"      // Suppress TensorFlow INFO logs for cleaner output
   	},
 
