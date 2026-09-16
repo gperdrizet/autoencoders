@@ -6,7 +6,7 @@
 	// See here: https://hub.docker.com/r/gperdrizet/deeplearning-gpu
     // And here: https://docs.nvidia.com/deeplearning/frameworks/tensorflow-release-notes/rel-24-06.html
 	"name": "Autoencoders GPU",
-	"image": "gperdrizet/deeplearning-nvidia",
+	"image": "gperdrizet/deeplearning-nvidia:7.0.1",
     "runArgs": [
 		"--gpus", "device=1",         // Use first avalible GPU
 		"--pid=host",                 // Use host PIDs, needed for nvidia-smi process list
