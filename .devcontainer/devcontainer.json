@@ -8,16 +8,16 @@
 	"name": "Autoencoders GPU",
 	"image": "gperdrizet/deeplearning-nvidia:7.0.1",
     "runArgs": [
-		"--gpus", "device=1",         // Use first avalible GPU
+		"--gpus", "device=2",         // Use first avalible GPU
 		"--pid=host",                 // Use host PIDs, needed for nvidia-smi process list
 		"--ipc=host",                 // Connect to host interprocess namespace
 		"--ulimit", "memlock=-1",     // Turn of memory lock limit
 		"--ulimit", "stack=67108864", // Increase process stack limit to 64 MB
 		"--publish", "8501:8501",     // Map Streamlit port for web app access
-		"--publish", "6006:6006",     // Map TensorBoard port for monitoring
+		// "--publish", "6006:6006",     // Map TensorBoard port for monitoring
 		"--network=bridge"            // Explicitly use bridge network for internet access
 	],
-	"forwardPorts": [8501, 6006],     // Auto-forward Streamlit and TensorBoard ports
+	// "forwardPorts": [8501, 6006],     // Auto-forward Streamlit and TensorBoard ports
 	"remoteUser": "vscode",           // Use the 'vscode' user provided by the base image
 	"containerEnv": {
 		"TF_CPP_MIN_LOG_LEVEL": "1"   // Suppress TensorFlow INFO logs for cleaner output
@@ -32,17 +32,16 @@
 		// Use 'settings' to set default VS code values on container create
 		"settings": {
 			// Set the default Python interpreter
-			"python.defaultInterpreterPath": "/usr/local/bin/python",
+			"python.defaultInterpreterPath": "/usr/bin/python",
 			
 			// Exclude other Python versions from Jupyter kernel list
 			// Prevents confusion by hiding system Python versions we don't want to use
 			"jupyter.kernels.excludePythonEnvironments": [
 				"/bin/python",
 				"/bin/python3",
-				"/bin/python3.12",
+				"/bin/python3.10",
 				"/usr/bin/python3",
-				"/usr/bin/python3.12",
-				"/usr/local/bin/python3"
+				"/usr/bin/python3.10"
 			],
 			
 			// Disable automatic port forwarding to give explicit control
