@@ -11,10 +11,10 @@ Two demonstrations focusing on image processing:
 
 1. **Image compression** - Compress 256×256 images to 2048 numbers (96× ratio) using a convolutional AE trained on DF2K_OST high-quality photographs
 2. **Image denoising** - Remove Gaussian noise from images; the AE learns the manifold of clean images and pushes noisy inputs back onto it
+3. **Anomaly detection** - Use reconstruction error as an unsupervised anomaly detection technique for images that 'don't belong'
 
 Each demo includes:
 - **Training notebooks** - Step-by-step training with detailed explanations
-- **Interactive web app** - Streamlit-based demo for hands-on exploration
 - **Pre-trained models** - Ready-to-use models automatically downloaded from HuggingFace
 
 ## Quick Start
@@ -47,6 +47,8 @@ jupyter notebook
 |---|---|
 | `notebooks/01-compression.ipynb` | Train compression autoencoder (latent_dim=2048, 256×256 images) |
 | `notebooks/02-denoising.ipynb` | Train denoising autoencoder (σ=25 Gaussian noise, 256×256 images) |
+| `notebooks/03-anomaly-detection-activity.ipynb` | Design and train your own anomaly detection autoencoder on CIFAR10 images |
+| `notebooks/04-anomaly-detection-activity-solution.ipynb` | Activity solution |
 
 Set `TRAIN_MODEL = False` in any notebook to skip training and use the pre-trained model.
 
