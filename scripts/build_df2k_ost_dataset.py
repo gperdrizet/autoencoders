@@ -9,7 +9,7 @@ Dataset composition:
 - OST: 10,324 outdoor scene images
 
 Processing:
-- Resize all images to 256×256 using Lanczos resampling
+- Resize all images to 256x256 using Lanczos resampling
 - Create 90/10 train/validation split
 - Upload to HuggingFace dataset repository
 
@@ -31,6 +31,7 @@ import numpy as np
 # Check for required packages
 try:
     from tqdm import tqdm
+
 except ImportError:
     print("Installing tqdm...")
     os.system("pip install tqdm")
@@ -38,6 +39,7 @@ except ImportError:
 
 try:
     from dotenv import load_dotenv
+
 except ImportError:
     print("Installing python-dotenv...")
     os.system("pip install python-dotenv")
@@ -45,6 +47,7 @@ except ImportError:
 
 try:
     from datasets import Dataset, DatasetDict, Image as DatasetImage
+
 except ImportError:
     print("Installing datasets...")
     os.system("pip install datasets")
@@ -52,6 +55,7 @@ except ImportError:
 
 try:
     from huggingface_hub import HfApi
+
 except ImportError:
     print("Installing huggingface-hub...")
     os.system("pip install huggingface-hub")
@@ -61,7 +65,8 @@ except ImportError:
 load_dotenv()
 
 # Configuration
-RAW_DATA_DIR = Path("/workspaces/autoencoders/data/raw")
+PROJECT_ROOT = Path('..').resolve()
+RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw"
 TARGET_SIZE = (256, 256)
 TRAIN_SPLIT = 0.9
 REPO_ID = os.getenv("HF_REPO_ID", "gperdrizet/DF2K_OST")
@@ -99,17 +104,22 @@ def process_image(image_path, target_size=(256, 256)):
     Returns:
         PIL Image resized to target_size
     """
+
     try:
         img = Image.open(image_path).convert('RGB')
         img = img.resize(target_size, Image.LANCZOS)
+
         return img
+
     except Exception as e:
         print(f"Error processing {image_path}: {e}")
+
         return None
 
 
 def collect_all_images():
     """Collect all image paths from all sources."""
+
     print("=" * 70)
     print("COLLECTING IMAGE PATHS")
     print("=" * 70)
@@ -148,6 +158,7 @@ def process_and_split_dataset(image_list, train_split=0.9):
     Returns:
         (train_data, val_data) tuples of processed images
     """
+
     print("\n" + "=" * 70)
     print("PROCESSING IMAGES")
     print("=" * 70)
@@ -167,9 +178,11 @@ def process_and_split_dataset(image_list, train_split=0.9):
     # Process training images
     print("\nProcessing training images...")
     train_data = []
+
     for idx in tqdm(train_indices, desc="Train"):
         img_info = image_list[idx]
         img = process_image(img_info['path'], TARGET_SIZE)
+
         if img is not None:
             train_data.append({
                 'image': img,
@@ -180,9 +193,11 @@ def process_and_split_dataset(image_list, train_split=0.9):
     # Process validation images
     print("\nProcessing validation images...")
     val_data = []
+
     for idx in tqdm(val_indices, desc="Validation"):
         img_info = image_list[idx]
         img = process_image(img_info['path'], TARGET_SIZE)
+
         if img is not None:
             val_data.append({
                 'image': img,
@@ -198,6 +213,7 @@ def process_and_split_dataset(image_list, train_split=0.9):
 
 def create_huggingface_dataset(train_data, val_data):
     """Create HuggingFace Dataset from processed data."""
+
     print("\n" + "=" * 70)
     print("CREATING HUGGINGFACE DATASET")
     print("=" * 70)
@@ -232,6 +248,7 @@ def create_huggingface_dataset(train_data, val_data):
 
 def create_dataset_card(dataset_dict):
     """Create README.md content for dataset card."""
+
     return f"""---
 license: apache-2.0
 task_categories:
@@ -249,7 +266,7 @@ tags:
 
 # DF2K_OST Dataset
 
-High-quality 256×256 image dataset for training autoencoders.
+High-quality 256x256 image dataset for training autoencoders.
 
 ## Dataset Description
 
@@ -259,7 +276,7 @@ This dataset combines three high-quality image sources commonly used for image s
 - **Flickr2K**: 2,650 high-resolution images
 - **OST (Outdoor Scene Training)**: 10,324 outdoor scene images
 
-All images have been resized to 256×256 pixels using Lanczos resampling for optimal quality.
+All images have been resized to 256x256 pixels using Lanczos resampling for optimal quality.
 
 ## Dataset Structure
 
@@ -270,14 +287,14 @@ DF2K_OST/
 ```
 
 Each sample contains:
-- `image`: 256×256 RGB image
+- `image`: 256x256 RGB image
 - `source`: Original dataset source (DIV2K, Flickr2K, or OST)
 - `filename`: Original filename
 
 ## Processing
 
 All images were processed using:
-- Target resolution: 256×256 pixels
+- Target resolution: 256x256 pixels
 - Resampling method: Lanczos (PIL.Image.LANCZOS)
 - Color mode: RGB
 - Train/validation split: 90/10 (stratified random)
@@ -351,6 +368,7 @@ Repository: https://github.com/gperdrizet/autoencoders
 
 def upload_to_huggingface(dataset_dict):
     """Upload dataset to HuggingFace Hub."""
+
     print("\n" + "=" * 70)
     print("UPLOADING TO HUGGINGFACE HUB")
     print("=" * 70)
@@ -358,6 +376,7 @@ def upload_to_huggingface(dataset_dict):
     if not HF_TOKEN:
         print("Error: HF_TOKEN not found in environment variables")
         print("Please set HF_TOKEN in .env file")
+
         return False
     
     print(f"Repository: {REPO_ID}")
@@ -377,6 +396,7 @@ def upload_to_huggingface(dataset_dict):
         readme_content = create_dataset_card(dataset_dict)
         
         api = HfApi()
+
         api.upload_file(
             path_or_fileobj=readme_content.encode(),
             path_in_repo="README.md",
@@ -390,6 +410,7 @@ def upload_to_huggingface(dataset_dict):
         
     except Exception as e:
         print(f"\nError uploading dataset: {e}")
+
         return False
 
 
@@ -429,6 +450,7 @@ def main():
         print("=" * 70)
         print("\nThis script can now be safely deleted.")
         print(f"Dataset available at: https://huggingface.co/datasets/{REPO_ID}")
+
     else:
         print("\n" + "=" * 70)
         print("DATASET UPLOAD FAILED")
