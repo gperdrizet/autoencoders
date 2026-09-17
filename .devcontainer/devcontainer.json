@@ -8,27 +8,26 @@
 	"name": "Autoencoders GPU",
 	"image": "gperdrizet/deeplearning-nvidia:7.0.1",
     "runArgs": [
-		//"--gpus", "device=0",       // Choose which GPU to make available to the container (to use 
+		"--gpus", "device=0",         // Choose which GPU to make available to the container (to use 
 	                                  // multiple GPUs comment this line and use --runtime=nvidia instead)
 
-		"--runtime=nvidia",           // Used in conjunction with NVIDIA_VISIBLE_DEVICES to pass multiple
+		//"--runtime=nvidia",         // Used in conjunction with NVIDIA_VISIBLE_DEVICES to pass multiple
 		                              // GPUs (to use a single GPU, comment this line and use --gpus instead)
 
 		"--pid=host",                 // Use host PIDs, needed for nvidia-smi process list
 		"--ipc=host",                 // Connect to host interprocess namespace
 		"--ulimit", "memlock=-1",     // Turn of memory lock limit
 		"--ulimit", "stack=67108864", // Increase process stack limit to 64 MB
-		"--publish", "8501:8501",     // Map Streamlit port for web app access
-		// "--publish", "6006:6006",     // Map TensorBoard port for monitoring
+		"--publish", "6006:6006",     // Map TensorBoard port for monitoring
 		"--network=bridge"            // Explicitly use bridge network for internet access
 	],
-	// "forwardPorts": [8501, 6006],     // Auto-forward Streamlit and TensorBoard ports
-	"remoteUser": "vscode",              // Use the 'vscode' user provided by the base image
+	// "forwardPorts": [8501, 6006],       // Auto-forward Streamlit and TensorBoard ports
+	"remoteUser": "vscode",                // Use the 'vscode' user provided by the base image
 	"containerEnv": {
-		"NVIDIA_VISIBLE_DEVICES": "1,2", // Used to pass multiple GPU device IDs to the container if using a 
-										 // single GPU comment this line and pass a single index to --gpus instead
+		//"NVIDIA_VISIBLE_DEVICES": "1,2", // Used to pass multiple GPU device IDs to the container if using a 
+										   // single GPU comment this line and pass a single index to --gpus instead
 
-		"TF_CPP_MIN_LOG_LEVEL": "1"      // Suppress TensorFlow INFO logs for cleaner output
+		"TF_CPP_MIN_LOG_LEVEL": "1"        // Suppress TensorFlow INFO logs for cleaner output
   	},
 
 	// Custom configuration options
@@ -39,6 +38,7 @@
 
 		// Use 'settings' to set default VS code values on container create
 		"settings": {
+
 			// Set the default Python interpreter
 			"python.defaultInterpreterPath": "/usr/bin/python",
 			
@@ -79,5 +79,5 @@
 	"postCreateCommand": "mkdir -p logs && mkdir -p models && mkdir -p data && pip install --force-reinstall --no-deps sympy==1.13.1 && pip install -r requirements.txt",
 
 	// Use 'postAttachCommand' to run TensorBoard
-	"postAttachCommand": ""
+	"postAttachCommand": "tensorboard --logdir=logs"
 }
