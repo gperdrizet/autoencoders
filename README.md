@@ -49,12 +49,53 @@ Set `TRAIN_MODEL = False` in any notebook to skip training and use the pre-train
 
 ## Dataset
 
-**DF2K_OST** (combined high-quality image dataset)
-- Combined dataset from DIV2K, Flickr2K, and OST datasets
-- ~13,874 high-quality images resized to 256×256 with Lanczos resampling
+### DF2K_OST 
+Combined high-quality image dataset created for this demonstration repository (see `scripts/build_df2k_ost_dataset.py`)
+
+- Images from DIV2K, Flickr2K, and OST datasets
+- ~30k high-quality images resized to 256×256 with Lanczos resampling
 - 90/10 train/validation split
 - Hosted on HuggingFace: [gperdrizet/DF2K_OST](https://huggingface.co/datasets/gperdrizet/DF2K_OST)
 - Downloaded automatically on first run
+
+### Original data sources
+
+**DIV2K**
+- **Citation**: Agustsson, E., & Timofte, R. (2017). NTIRE 2017 Challenge on Single Image Super-Resolution: Dataset and Study.
+- **Paper**: CVPR Workshops 2017
+- **Website**: https://data.vision.ee.ethz.ch/cvl/DIV2K/
+
+**Flickr2K**
+- **Citation**: Agustsson, E. & Timofte, R. (2017). "NTIRE 2017 challenge on single image super-resolution: Dataset and study." In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition Workshops (CVPRW).
+- **Repository**: https://github.com/limbee/NTIRE2017
+
+**OST (Outdoor Scene Training)**
+- **Citation**: Wang, X., Yu, K., Dong, C., & Loy, C. C. (2018). Recovering Realistic Texture in Image Super-resolution by Deep Spatial Feature Transform. arXiv:1804.02815
+- **Paper**: https://arxiv.org/abs/1804.02815
+- **Repository**: https://github.com/xinntao/SFTGAN
+
+### Citation
+
+If you use this dataset, please cite the original source datasets:
+
+```bibtex
+@inproceedings{{agustsson2017ntire,
+  title={{NTIRE 2017 Challenge on Single Image Super-Resolution: Dataset and Study}},
+  author={{Agustsson, Eirikur and Timofte, Radu}},
+  booktitle={{CVPR Workshops}},
+  year={{2017}}
+}}
+
+@misc{{wang2018recoveringrealistictextureimage,
+  title={{Recovering Realistic Texture in Image Super-resolution by Deep Spatial Feature Transform}}, 
+  author={{Xintao Wang and Ke Yu and Chao Dong and Chen Change Loy}},
+  year={{2018}},
+  eprint={{1804.02815}},
+  archivePrefix={{arXiv}},
+  primaryClass={{cs.CV}},
+  url={{https://arxiv.org/abs/1804.02815}}
+}}
+```
 
 ---
 
@@ -102,19 +143,6 @@ Each Conv block uses BatchNorm + LeakyReLU(0.2).
 
 - **Compression**: `latent_dim=2048` → 96× compression ratio
 - **Denoising**: `latent_dim=2048` → same architecture, trained on noisy inputs
-
----
-
-## Performance targets
-
-**Note**: Visual quality is the primary evaluation criterion. Metrics serve as guides, not hard targets.
-
-| Demo | Metric | Guide | Notes |
-|---|---|---|---|
-| Compression | PSNR | > 30 dB | At 96× compression ratio (196,608 → 2048) |
-| Compression | SSIM | > 0.90 | Visual similarity to original |
-| Denoising | PSNR | > 28 dB | vs noisy input at σ=25 |
-| Denoising | SSIM | > 0.85 | Noise removal without over-smoothing |
 
 ---
 
