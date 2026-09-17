@@ -1,35 +1,9 @@
-# # Autoencoders Demo - Requirements
-# # For local development with GPU support
-
-# # Visualization
-# matplotlib
-# seaborn
-# plotly
-
 # Image Processing
-# Pillow
 scikit-image
-# #opencv-python
-# pyarrow
-
-# # Dimensionality Reduction
-# #umap-learn
-
-# # Web App
-# streamlit
 
 # Model Management
-# huggingface-hub
 datasets==4.0.0
-# multiprocess
-# filelock
-# dill
-# python-dotenv
 
-# # Jupyter
-# ipykernel
+# Jupyter
 ipywidgets
 jupyterlab_widgets
-
-# # Utilities
-# tqdm
