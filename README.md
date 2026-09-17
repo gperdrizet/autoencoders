@@ -29,15 +29,8 @@ pip install -r requirements.txt
 
 Pre-trained models and datasets are hosted on HuggingFace and download automatically on first use. No configuration required for students.
 
-### 3. Launch the Streamlit app
 
-```bash
-streamlit run app.py
-```
-
-Then open <http://localhost:8501>.
-
-### 4. (Optional) Run the training notebooks
+### 3. Run the training notebooks
 
 ```bash
 jupyter notebook
@@ -50,7 +43,7 @@ jupyter notebook
 | `notebooks/03-anomaly-detection-activity.ipynb` | Design and train your own anomaly detection autoencoder on CIFAR10 images |
 | `notebooks/04-anomaly-detection-activity-solution.ipynb` | Activity solution |
 
-Set `TRAIN_MODEL = False` in any notebook to skip training and use the pre-trained model.
+Set `TRAIN_MODEL = False` in any notebook to skip training and use the pre-trained model from the in class demo.
 
 ---
 
@@ -122,16 +115,6 @@ Each Conv block uses BatchNorm + LeakyReLU(0.2).
 | Compression | SSIM | > 0.90 | Visual similarity to original |
 | Denoising | PSNR | > 28 dB | vs noisy input at σ=25 |
 | Denoising | SSIM | > 0.85 | Noise removal without over-smoothing |
-
----
-
-## Deploying to Streamlit Cloud
-
-1. Push to GitHub
-2. Go to [share.streamlit.io](https://share.streamlit.io) → New app
-3. Set main file: `app.py`, Python 3.10+
-4. The app uses `requirements-cloud.txt` (CPU-only TensorFlow) automatically
-5. Models and datasets download automatically from HuggingFace
 
 ---
 
