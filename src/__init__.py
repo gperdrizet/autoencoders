@@ -1,8 +1,3 @@
-"""
-Autoencoders Demo - Shared Utilities
+"""Init file for src package."""
 
-This package contains reusable utilities for both training notebooks
-and the Streamlit web application.
-"""
-
-__version__ = '1.0.0'
+__version__ = "2.0.0"

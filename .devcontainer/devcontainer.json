@@ -5,22 +5,29 @@
 	// Based on NVIDIA's official TensorFlow 24.06 image with GPU support
 	// See here: https://hub.docker.com/r/gperdrizet/deeplearning-gpu
     // And here: https://docs.nvidia.com/deeplearning/frameworks/tensorflow-release-notes/rel-24-06.html
-	"name": "Autoencoders demo",
-	"image": "gperdrizet/deeplearning-gpu",
+	"name": "Autoencoders GPU",
+	"image": "gperdrizet/deeplearning-nvidia:7.0.1",
     "runArgs": [
-		"--gpus", "all",              // Use all available GPUs
+		"--gpus", "device=0",         // Choose which GPU to make available to the container (to use 
+	                                  // multiple GPUs comment this line and use --runtime=nvidia instead)
+
+		//"--runtime=nvidia",         // Used in conjunction with NVIDIA_VISIBLE_DEVICES to pass multiple
+		                              // GPUs (to use a single GPU, comment this line and use --gpus instead)
+
 		"--pid=host",                 // Use host PIDs, needed for nvidia-smi process list
 		"--ipc=host",                 // Connect to host interprocess namespace
 		"--ulimit", "memlock=-1",     // Turn of memory lock limit
 		"--ulimit", "stack=67108864", // Increase process stack limit to 64 MB
-		"--publish", "8501:8501",     // Map Streamlit port for web app access
 		"--publish", "6006:6006",     // Map TensorBoard port for monitoring
 		"--network=bridge"            // Explicitly use bridge network for internet access
 	],
-	"forwardPorts": [8501, 6006],     // Auto-forward Streamlit and TensorBoard ports
-	"remoteUser": "vscode",           // Use the 'vscode' user provided by the base image
+	"forwardPorts": [6006],       // Auto-forward TensorBoard port
+	"remoteUser": "vscode",                // Use the 'vscode' user provided by the base image
 	"containerEnv": {
-		"TF_CPP_MIN_LOG_LEVEL": "1"   // Suppress TensorFlow INFO logs for cleaner output
+		//"NVIDIA_VISIBLE_DEVICES": "0,1", // Used to pass multiple GPU device IDs to the container if using a 
+										   // single GPU comment this line and pass a single index to --gpus instead
+
+		"TF_CPP_MIN_LOG_LEVEL": "1"        // Suppress TensorFlow INFO logs for cleaner output
   	},
 
 	// Custom configuration options
@@ -31,6 +38,7 @@
 
 		// Use 'settings' to set default VS code values on container create
 		"settings": {
+
 			// Set the default Python interpreter
 			"python.defaultInterpreterPath": "/usr/bin/python",
 			
@@ -56,7 +64,9 @@
 		  "ms-python.python",                       // Core Python language support, IntelliSense, debugging
 		  "ms-toolsai.jupyter",                     // Jupyter notebook support for interactive data science
 		  "streetsidesoftware.code-spell-checker",  // Spell checking for code and documentation
-		  "ms-toolsai.tensorboard"                  // TensorBoard extension
+		  "ms-toolsai.tensorboard",                 // TensorBoard extension
+		  "GitHub.copilot",                         // GitHub Copilot AI code completions
+		  "GitHub.copilot-chat"                     // GitHub Copilot Chat
 		]
 	  }
 	},
@@ -66,8 +76,8 @@
 	"onCreateCommand": "",
 
 	// Use 'postCreateCommand' to run commands once after the container is created
-	"postCreateCommand": "mkdir -p logs && mkdir -p models && mkdir -p data && pip install -r requirements.txt",
+	"postCreateCommand": "mkdir -p logs && mkdir -p models && mkdir -p data && pip install --force-reinstall --no-deps sympy==1.13.1 && pip install -r requirements.txt",
 
 	// Use 'postAttachCommand' to run TensorBoard
-	"postAttachCommand": ""
+	"postAttachCommand": "tensorboard --logdir=logs"
 }

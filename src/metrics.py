@@ -1,146 +1,94 @@
 """
-Metrics and evaluation utilities for autoencoders.
+Metrics for evaluating autoencoder performance.
 """
 
-# Third-party imports
 import numpy as np
-import tensorflow as tf
-from sklearn.metrics import auc, roc_auc_score, roc_curve
+from skimage.metrics import structural_similarity as ssim
+from skimage.metrics import peak_signal_noise_ratio as psnr
 
 
 def calculate_mse(original, reconstructed):
     """
-    Calculate Mean Squared Error between images.
+    Calculate Mean Squared Error.
     
     Args:
         original: Original images
         reconstructed: Reconstructed images
     
     Returns:
-        MSE value(s)
+        MSE value
     """
-    return np.mean((original - reconstructed) ** 2, axis=(1, 2, 3))
+    return np.mean((original - reconstructed) ** 2)
 
 
-def calculate_reconstruction_error(model, images):
+def calculate_psnr(original, reconstructed, data_range=1.0):
     """
-    Calculate reconstruction error for anomaly detection.
+    Calculate Peak Signal-to-Noise Ratio.
     
     Args:
-        model: Trained autoencoder model
-        images: Input images
+        original: Original images  
+        reconstructed: Reconstructed images
+        data_range: Range of data (1.0 for normalized images)
     
     Returns:
-        Array of reconstruction errors (MSE per image)
+        PSNR in dB
     """
-    reconstructed = model.predict(images, verbose=0)
-    errors = calculate_mse(images, reconstructed)
-    return errors
+    # Calculate for each image and return mean
+    psnr_values = []
+    
+    for i in range(len(original)):
+        psnr_val = psnr(original[i], reconstructed[i], data_range=data_range)
+        psnr_values.append(psnr_val)
+    
+    return np.mean(psnr_values)
 
 
-def compute_anomaly_threshold(errors, percentile=95):
+def calculate_ssim(original, reconstructed, data_range=1.0):
     """
-    Compute anomaly detection threshold based on percentile.
+    Calculate Structural Similarity Index.
     
     Args:
-        errors: Reconstruction errors from normal data
-        percentile: Percentile for threshold (default: 95)
+        original: Original images
+        reconstructed: Reconstructed images  
+        data_range: Range of data (1.0 for normalized images)
     
     Returns:
-        Threshold value
+        Mean SSIM value
     """
-    return np.percentile(errors, percentile)
+    ssim_values = []
+    
+    for i in range(len(original)):
+        ssim_val = ssim(
+            original[i], 
+            reconstructed[i], 
+            data_range=data_range,
+            channel_axis=2  # Color channel is last dimension
+        )
+        ssim_values.append(ssim_val)
+    
+    return np.mean(ssim_values)
 
 
-def compute_roc_metrics(y_true, scores):
+def compute_metrics(original, reconstructed, latent_dim=None):
     """
-    Compute ROC curve and AUC score.
-    
-    Args:
-        y_true: True binary labels (0=normal, 1=anomaly)
-        scores: Anomaly scores (higher = more anomalous)
-    
-    Returns:
-        Dictionary with fpr, tpr, thresholds, and auc
-    """
-    fpr, tpr, thresholds = roc_curve(y_true, scores)
-    roc_auc = auc(fpr, tpr)
-    
-    return {
-        'fpr': fpr,
-        'tpr': tpr,
-        'thresholds': thresholds,
-        'auc': roc_auc
-    }
-
-
-def find_optimal_threshold(y_true, scores):
-    """
-    Find optimal threshold using Youden's J statistic.
-    
-    Args:
-        y_true: True binary labels
-        scores: Anomaly scores
-    
-    Returns:
-        Optimal threshold value
-    """
-    fpr, tpr, thresholds = roc_curve(y_true, scores)
-    
-    # Youden's J statistic
-    j_scores = tpr - fpr
-    optimal_idx = np.argmax(j_scores)
-    
-    return thresholds[optimal_idx]
-
-
-def compute_confusion_matrix(y_true, y_pred):
-    """
-    Compute confusion matrix.
-    
-    Args:
-        y_true: True labels
-        y_pred: Predicted labels
-    
-    Returns:
-        Confusion matrix as 2D numpy array
-    """
-    return confusion_matrix(y_true, y_pred)
-
-
-def calculate_compression_ratio(original_shape, latent_dim):
-    """
-    Calculate compression ratio.
-    
-    Args:
-        original_shape: Shape of original image (H, W, C)
-        latent_dim: Dimension of latent representation
-    
-    Returns:
-        Compression ratio
-    """
-    original_size = np.prod(original_shape)
-    compressed_size = latent_dim
-    
-    return original_size / compressed_size
-
-
-def compute_metrics_summary(original, reconstructed, latent_dim):
-    """
-    Compute a summary of all quality metrics.
+    Compute all metrics for reconstructed images.
     
     Args:
         original: Original images
         reconstructed: Reconstructed images
-        latent_dim: Latent dimension for compression ratio
+        latent_dim: Latent dimension (for compression ratio calculation)
     
     Returns:
         Dictionary of metrics
     """
-    mse = np.mean(calculate_mse(original, reconstructed))
-    compression_ratio = calculate_compression_ratio(original.shape[1:], latent_dim)
-    
-    return {
-        'mse': float(mse),
-        'compression_ratio': float(compression_ratio)
+    metrics = {
+        'mse': calculate_mse(original, reconstructed),
+        'psnr': calculate_psnr(original, reconstructed),
+        'ssim': calculate_ssim(original, reconstructed),
     }
+    
+    if latent_dim is not None:
+        input_size = original.shape[1] * original.shape[2] * original.shape[3]
+        metrics['compression_ratio'] = input_size / latent_dim
+    
+    return metrics
