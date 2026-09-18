@@ -82,6 +82,7 @@ def create_train_val_split(images, val_split=0.1, seed=42):
     Returns:
         (train_images, val_images)
     """
+
     np.random.seed(seed)
     
     n_total = len(images)
@@ -112,9 +113,11 @@ def add_gaussian_noise(images, noise_level=25):
     Returns:
         Noisy images clipped to [0, 1]
     """
+
     noise_std = noise_level / 255.0
     noise = np.random.normal(0, noise_std, images.shape).astype(np.float32)
     noisy_images = images + noise
+
     return np.clip(noisy_images, 0, 1)
 
 
@@ -204,6 +207,7 @@ def create_tf_dataset(
             )
         )
         val_dataset = val_dataset.repeat().batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    
     else:
         val_dataset = None
     
@@ -302,6 +306,7 @@ def create_denoising_tf_dataset(
             )
         )
         val_dataset = val_dataset.repeat().batch(batch_size).prefetch(tf.data.AUTOTUNE)
+
     else:
         val_dataset = None
     
